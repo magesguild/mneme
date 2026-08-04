@@ -20,11 +20,12 @@ ts-dist
 /result
 refs
 Session.vim
-/opencode.json
+/mneme.json
 a.out
 target
 .scripts
 .direnv/
+.tools/
 
 # Local dev files
 opencode-dev

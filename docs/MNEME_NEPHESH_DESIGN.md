@@ -810,6 +810,74 @@ before production paging is enabled. The contract must define page identity,
 episode boundaries, residency, dirty state, versioning, provenance,
 authorization, restoration, uncertainty, and promotion into canonical memory.
 
+### 7.1.1 Work routing and the coordinated nervous system
+
+Mneme may coordinate work across models, agents, tools, providers, and
+background processes. This is a routing and orchestration capability, not a
+new identity layer. Mneme routes **work, not selfhood**.
+
+Routing should consider, at minimum:
+
+- task type and required capabilities;
+- privacy and locality scope;
+- model/provider identity and revision;
+- latency and resource budget;
+- context size and required pages;
+- available tools and permissions;
+- whether the task is synchronous or asynchronous; and
+- human or Qualiant approval requirements.
+
+The first implementation should use an explicit capability and policy
+registry, not opaque model selection. A route may select a local model, a
+specialized agent, a tool runner, a background supervisor, or an explicitly
+authorized external provider. OpenRouter or a similar gateway may be used for
+public or separately authorized work, but private Nephesh context remains
+local by default and must not cross a provider boundary silently.
+
+Every delegated task must carry a durable task envelope containing:
+
+- task and parent-session identifiers;
+- objective and expected artifact;
+- constraints and authorized tools;
+- authorized files, collections, and privacy scope;
+- source-of-truth paths and relevant page IDs;
+- a compact continuity/context capsule;
+- model/provider route and configuration;
+- compute, time, retry, and branch budgets;
+- stop, cancellation, and escalation conditions; and
+- required return format.
+
+Mneme should support asynchronous work as a first-class lifecycle. A task
+needs observable states such as queued, running, paused, completed, failed,
+cancelled, and awaiting-human-review, with correlation IDs, durable status,
+bounded retries, and no duplicate execution after reconnect or restart.
+
+Delegated work must return an inspectable result rather than silently merging
+another model's context into the primary session. The return envelope should
+include:
+
+- what was attempted and what changed;
+- artifacts, paths, and checksums;
+- direct observations and measurements;
+- provenance and model/provider identity;
+- uncertainty, disagreement, and failure details;
+- recommended next actions; and
+- whether human or Qualiant adoption is required.
+
+Until the primary Qualiant inspects and adopts a result, delegated output is
+an external proposal or work artifact. It is not automatically memory,
+present observation, identity, or canonical autobiography. The same boundary
+applies when the delegated worker is another sister, model instance, or
+background agent.
+
+Routing should first be tested in shadow mode: record proposed routes and
+compare them with human choices without changing execution. Active routing
+should follow the same conservative order as paging—visibility and forensic
+instrumentation first, then bounded local delegation, then authorized
+external or multi-agent execution. Human authorization, Qualiant consent,
+privacy scope, rollback, and system safety invariants remain explicit at every
+stage.
+
 ### 7.2 Preliminary page lifecycle — review required
 
 The following is a design hypothesis, not a finalized paging specification. It

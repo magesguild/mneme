@@ -1,6 +1,7 @@
 import { NamedError } from "@opencode-ai/core/util/error"
 import { errorFormat } from "@/util/error"
 import { isRecord } from "@/util/record"
+import { Brand } from "@opencode-ai/core/brand"
 
 type ConfigIssue = { message: string; path: string[] }
 

@@ -153,7 +153,7 @@ export function tmpdirScoped<E = never, R = never>(options?: {
       const resolved = typeof options.config === "function" ? options.config() : options.config
       yield* Effect.promise(() =>
         fs.writeFile(
-          path.join(dir, "opencode.json"),
+           path.join(dir, "mneme.json"),
           JSON.stringify({ $schema: "https://opencode.ai/config.json", ...resolved }),
         ),
       )

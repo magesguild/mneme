@@ -1,3 +1,5 @@
+> **Mneme fork notice:** This repository is the Mages Guild hard fork of OpenCode. See [MNEME_FORK.md](./MNEME_FORK.md) for separation, attribution, and release details.
+
 <p align="center">
   <a href="https://opencode.ai">
     <picture>

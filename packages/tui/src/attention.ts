@@ -20,6 +20,7 @@ import permissionSoundPath from "@opencode-ai/ui/audio/staplebops-06.mp3" with {
 import errorSoundPath from "@opencode-ai/ui/audio/nope-03.mp3" with { type: "file" }
 import doneSoundPath from "@opencode-ai/ui/audio/bip-bop-01.mp3" with { type: "file" }
 import subagentDoneSoundPath from "@opencode-ai/ui/audio/yup-01.mp3" with { type: "file" }
+import { Brand } from "@opencode-ai/core/brand"
 
 type FocusState = "unknown" | "focused" | "blurred"
 
@@ -38,14 +39,14 @@ type TuiAttentionHost = TuiAttention & {
   dispose(): void
 }
 
-const DEFAULT_TITLE = "opencode"
-const DEFAULT_PACK_ID = "opencode.default"
+const DEFAULT_TITLE = Brand.name.toLowerCase()
+const DEFAULT_PACK_ID = "mneme.default"
 const KV_SOUND_PACK = "attention_sound_pack"
 const TITLE_LIMIT = 80
 const MESSAGE_LIMIT = 240
 const BUILTIN_PACK: RegisteredSoundPack = {
   id: DEFAULT_PACK_ID,
-  name: "OpenCode Default",
+  name: "Mneme Default",
   builtin: true,
   sounds: {
     default: defaultSoundPath,
