@@ -18,9 +18,13 @@ export const FileAttachment = Schema.Struct({
     })),
   )
 
+export const ContextStyle = Schema.Literals(["standard", "paged"])
+export type ContextStyle = typeof ContextStyle.Type
+
 export interface Prompt extends Schema.Schema.Type<typeof Prompt> {}
 export const Prompt = Schema.Struct({
   text: Schema.String,
   files: Schema.Array(FileAttachment).pipe(optional),
   agents: Schema.Array(AgentAttachment).pipe(optional),
+  contextStyle: ContextStyle.pipe(optional),
 }).annotate({ identifier: "PromptInput" })

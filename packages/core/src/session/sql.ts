@@ -13,6 +13,7 @@ import { WorkspaceV2 } from "../workspace"
 import { Timestamps } from "../database/schema.sql"
 import type { SystemContext } from "../system-context/index"
 import { AgentV2 } from "../agent"
+import type { SessionContextStyle } from "./context-style"
 import type { Revert } from "@opencode-ai/schema/revert"
 
 type SessionMessageData = Omit<(typeof SessionMessage.Message)["Encoded"], "type" | "id">
@@ -173,4 +174,15 @@ export const SessionContextEpochTable = sqliteTable("session_context_epoch", {
   baseline: text().notNull(),
   snapshot: text({ mode: "json" }).notNull().$type<SystemContext.Snapshot>(),
   baseline_seq: integer().notNull(),
+})
+
+export const SessionContextStyleTable = sqliteTable("session_context_style", {
+  session_id: text()
+    .$type<SessionSchema.ID>()
+    .primaryKey()
+    .references(() => SessionTable.id, { onDelete: "cascade" }),
+  style: text().$type<SessionContextStyle.Style>().notNull(),
+  selected_at: integer()
+    .notNull()
+    .$default(() => Date.now()),
 })

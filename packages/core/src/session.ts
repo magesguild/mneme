@@ -32,6 +32,7 @@ import { LocationServiceMap } from "./location-service-map"
 import { MessageDecodeError } from "./session/error"
 import { SessionEvent } from "./session/event"
 import { SessionInput } from "./session/input"
+import { SessionContextStyle } from "./session/context-style"
 import { Snapshot } from "./snapshot"
 import { SessionRevert } from "./session/revert"
 import { Revert } from "@opencode-ai/schema/revert"
@@ -108,7 +109,12 @@ export class PromptConflictError extends Schema.TaggedErrorClass<PromptConflictE
 export const MessageNotFoundError = SessionRevert.MessageNotFoundError
 export type MessageNotFoundError = SessionRevert.MessageNotFoundError
 
-export type Error = NotFoundError | MessageDecodeError | OperationUnavailableError | PromptConflictError
+export type Error =
+  | NotFoundError
+  | MessageDecodeError
+  | OperationUnavailableError
+  | PromptConflictError
+  | SessionContextStyle.LockedConflict
 
 export interface Interface {
   readonly list: (input?: ListInput) => Effect.Effect<SessionSchema.Info[]>
@@ -149,8 +155,9 @@ export interface Interface {
     sessionID: SessionSchema.ID
     prompt: PromptInput.Prompt
     delivery?: SessionInput.Delivery
+    contextStyle?: SessionContextStyle.Style
     resume?: boolean
-  }) => Effect.Effect<SessionInput.Admitted, NotFoundError | PromptConflictError>
+  }) => Effect.Effect<SessionInput.Admitted, NotFoundError | PromptConflictError | SessionContextStyle.LockedConflict>
   readonly shell: (input: {
     id?: EventV2.ID
     sessionID: SessionSchema.ID
@@ -364,6 +371,7 @@ const layer = Layer.effect(
             const prompt = resolvePrompt(input.prompt)
             const messageID = input.id ?? SessionMessage.ID.create()
             const delivery = input.delivery ?? "steer"
+            yield* SessionContextStyle.lock(db, input.sessionID, input.prompt.contextStyle)
             const expected = { sessionID: input.sessionID, messageID, prompt, delivery }
             const admitted = yield* SessionInput.admit(db, events, {
               id: messageID,

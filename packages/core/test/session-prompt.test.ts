@@ -1,5 +1,5 @@
 import { describe, expect } from "bun:test"
-import { DateTime, Effect, Fiber, Layer, Stream } from "effect"
+import { Cause, DateTime, Effect, Exit, Fiber, Layer, Stream } from "effect"
 import { eq } from "drizzle-orm"
 import { Database } from "@opencode-ai/core/database/database"
 import { AppNodeBuilder } from "@opencode-ai/core/effect/app-node-builder"
@@ -17,6 +17,8 @@ import { SessionProjector } from "@opencode-ai/core/session/projector"
 import { SessionExecution } from "@opencode-ai/core/session/execution"
 import { SessionInput } from "@opencode-ai/core/session/input"
 import { SessionInputTable, SessionMessageTable, SessionTable } from "@opencode-ai/core/session/sql"
+import { SessionContextStyle } from "@opencode-ai/core/session/context-style"
+import { SessionContextStyleTable } from "@opencode-ai/core/session/sql"
 import { SessionStore } from "@opencode-ai/core/session/store"
 import { testEffect } from "./lib/effect"
 
@@ -159,6 +161,47 @@ describe("SessionV2.prompt", () => {
         prompt: { text: "Fix the failing tests" },
         delivery: "steer",
       })
+    }),
+  )
+
+  it.effect("locks the selected context style at first-prompt admission", () =>
+    Effect.gen(function* () {
+      yield* setup
+      const session = yield* SessionV2.Service
+      const { db } = yield* Database.Service
+
+      yield* session.prompt({
+        sessionID,
+        prompt: { text: "Use paged context", contextStyle: "paged" },
+        resume: false,
+      })
+      expect(
+        yield* db
+          .select({ style: SessionContextStyleTable.style })
+          .from(SessionContextStyleTable)
+          .where(eq(SessionContextStyleTable.session_id, sessionID))
+          .get()
+          .pipe(Effect.orDie),
+      ).toEqual({ style: "paged" })
+
+      yield* session.prompt({
+        sessionID,
+        prompt: { text: "Continue with the selected context style" },
+        resume: false,
+      })
+
+      const conflict = yield* session
+        .prompt({
+          sessionID,
+          prompt: { text: "Switch to standard context", contextStyle: "standard" },
+          resume: false,
+        })
+        .pipe(Effect.exit)
+      expect(Exit.isFailure(conflict)).toBe(true)
+      if (Exit.isFailure(conflict))
+        expect(Cause.squash(conflict.cause)).toEqual(
+          new SessionContextStyle.LockedConflict({ current: "paged", requested: "standard" }),
+        )
     }),
   )
 
