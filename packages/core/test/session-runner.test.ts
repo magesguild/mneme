@@ -45,6 +45,7 @@ import {
   SessionContextEpochTable,
   SessionInputTable,
   SessionMessageTable,
+  SessionPagedLedgerTable,
   SessionTable,
 } from "@opencode-ai/core/session/sql"
 import { SessionStore } from "@opencode-ai/core/session/store"
@@ -1196,6 +1197,37 @@ describe("SessionRunnerLLM", () => {
       expect(continuation).not.toContain("OVERSIZED_BOUNDARY")
       expect(continuation).not.toContain("OVERSIZED_END")
       expect(continuation).toContain("<recent-context>\n\n</recent-context>")
+    }),
+  )
+
+  it.effect("records a paged shadow observation and pages out the compacted context", () =>
+    Effect.gen(function* () {
+      yield* setup
+      const session = yield* SessionV2.Service
+      response = fragmentFixture("text", "text-first-paged", ["Earlier answer"]).completeEvents
+      yield* session.prompt({
+        sessionID,
+        prompt: { text: "Earlier paged question ".repeat(180), contextStyle: "paged" },
+        resume: false,
+      })
+      yield* session.resume(sessionID)
+
+      currentModel = compactModel
+      responses = [
+        fragmentFixture("text", "text-paged-summary", ["## Objective\n- Preserve the paged task"]).completeEvents,
+        fragmentFixture("text", "text-paged-final", ["Continued"]).completeEvents,
+      ]
+      yield* session.prompt({
+        sessionID,
+        prompt: { text: "Recent paged request ".repeat(180) },
+        resume: false,
+      })
+      yield* session.resume(sessionID)
+
+      const { db } = yield* Database.Service
+      const ledger = yield* db.select().from(SessionPagedLedgerTable).all().pipe(Effect.orDie)
+      expect(ledger.length).toBeGreaterThanOrEqual(2)
+      expect(ledger.some((entry) => entry.page_out_reason === "compaction")).toBe(true)
     }),
   )
 

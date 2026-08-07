@@ -136,6 +136,7 @@ export interface Interface {
   readonly context: (
     sessionID: SessionSchema.ID,
   ) => Effect.Effect<SessionMessage.Message[], NotFoundError | MessageDecodeError>
+  readonly contextStyle: (sessionID: SessionSchema.ID) => Effect.Effect<SessionContextStyle.Style, NotFoundError>
   readonly events: (input: {
     sessionID: SessionSchema.ID
     after?: number
@@ -349,6 +350,10 @@ const layer = Layer.effect(
       context: Effect.fn("V2Session.context")(function* (sessionID) {
         yield* result.get(sessionID)
         return yield* store.context(sessionID)
+      }),
+      contextStyle: Effect.fn("V2Session.contextStyle")(function* (sessionID) {
+        yield* result.get(sessionID)
+        return (yield* SessionContextStyle.current(db, sessionID)) ?? "standard"
       }),
       events: (input) =>
         Stream.unwrap(
