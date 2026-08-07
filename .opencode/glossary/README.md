@@ -33,11 +33,11 @@ Prefer guidance that is:
 
 ## Sources
 
-- PR #12345: https://github.com/anomalyco/opencode/pull/12345
+- Historical source: upstream translation guidance retained for reference
 
 ## Do Not Translate (Locale Additions)
 
-- `OpenCode` (preserve casing)
+- `Mneme` (preserve casing)
 
 ## Preferred Terms
 

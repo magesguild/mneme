@@ -1,6 +1,9 @@
-# opencode VS Code Extension
+# Inherited OpenCode VS Code Extension
 
-A Visual Studio Code extension that integrates [opencode](https://opencode.ai) directly into your development workflow.
+This directory contains the inherited OpenCode VS Code extension integration.
+It remains tied to the upstream OpenCode CLI and is not currently a Mneme
+distribution surface. Do not represent it as a Mneme extension until its
+command, release, and ownership contracts have been deliberately migrated.
 
 ## Prerequisites
 

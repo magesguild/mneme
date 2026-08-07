@@ -1,6 +1,10 @@
-# opencode GitHub Action
+# Inherited OpenCode GitHub Action
 
-A GitHub Action that integrates [opencode](https://opencode.ai) directly into your GitHub workflow.
+This directory contains the inherited OpenCode GitHub Action integration. It is
+not currently a Mneme distribution surface: the workflow, GitHub App, command
+aliases, and action repository remain upstream-owned compatibility surfaces.
+Do not represent it as a Mneme release until those external contracts have an
+explicit migration and ownership decision.
 
 Mention `/opencode` in your comment, and opencode will execute tasks within your GitHub Actions runner.
 
