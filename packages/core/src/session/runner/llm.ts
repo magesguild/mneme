@@ -25,6 +25,9 @@ import { ReferenceGuidance } from "../../reference/guidance"
 import { ToolRegistry } from "../../tool/registry"
 import { ToolOutputStore } from "../../tool-output-store"
 import { SessionContextEpoch } from "../context-epoch"
+import { SessionContextStyle } from "../context-style"
+import { SessionContextAssembly } from "../context-assembly"
+import { SessionPagedLedger } from "../paged-ledger"
 import { SessionCompaction } from "../compaction"
 import { SessionEvent } from "../event"
 import { SessionHistory } from "../history"
@@ -37,6 +40,7 @@ import { createLLMEventPublisher } from "./publish-llm-event"
 import { toLLMMessages } from "./to-llm-message"
 import { MAX_STEPS_PROMPT } from "./max-steps"
 import { Snapshot } from "../../snapshot"
+import { Token } from "../../util/token"
 import { makeLocationNode } from "../../effect/app-node"
 import { llmClient } from "../../effect/app-node-platform"
 
@@ -199,10 +203,12 @@ const layer = Layer.effect(
       const model = yield* models.resolve(session)
       const entries = yield* SessionHistory.entriesForRunner(db, session.id, system.baselineSeq)
       const context = entries.map((entry) => entry.message)
+      const contextStyle = (yield* SessionContextStyle.current(db, session.id)) ?? "standard"
+      const contextLimit = model.route.defaults.limits?.context ?? 0
       const isLastStep = agent.info?.steps !== undefined && currentStep >= agent.info.steps
       const toolMaterialization = isLastStep ? undefined : yield* tools.materialize(agent.info?.permissions)
       const promptCacheKey = /^ses_[0-9a-f]{64}$/.test(session.id) ? session.id.slice(4) : session.id
-      const request = LLM.request({
+      const baseRequest = LLM.request({
         model,
         providerOptions: { openai: { promptCacheKey } },
         system: [agent.info?.system, system.baseline]
@@ -212,8 +218,60 @@ const layer = Layer.effect(
         tools: toolMaterialization?.definitions ?? [],
         toolChoice: isLastStep ? "none" : undefined,
       })
-      if (yield* compaction.compactIfNeeded({ sessionID: session.id, entries, model, request }))
+      const ledgerContext = JSON.stringify({
+          system: baseRequest.system,
+          messages: baseRequest.messages,
+          tools: baseRequest.tools,
+      })
+      const pagedObservation = yield* SessionContextAssembly.prepare(db, {
+        sessionID: session.id,
+        style: contextStyle,
+        baselineSeq: system.baselineSeq,
+        messageSeqs: entries.map((entry) => entry.seq),
+        context: ledgerContext,
+        estimatedTokens: Token.estimate(ledgerContext),
+        contextLimit,
+      })
+      if (yield* compaction.compactIfNeeded({ sessionID: session.id, entries, model, request: baseRequest })) {
+        if (pagedObservation) yield* SessionPagedLedger.pageOut(db, pagedObservation, "compaction")
         return yield* Effect.die(continueAfterCompaction(currentStep))
+      }
+      const restoration = yield* SessionContextAssembly.restore(db, {
+        sessionID: session.id,
+        style: contextStyle,
+        baseTokens: Token.estimate(ledgerContext),
+        contextLimit,
+      })
+      const restored = restoration
+        ? yield* SessionHistory.loadRange(
+            db,
+            session.id,
+            restoration.firstMessageSeq,
+            restoration.lastMessageSeq,
+          )
+        : []
+      const request = restored.length
+        ? {
+            ...baseRequest,
+            messages: [...toLLMMessages(restored.map((entry) => entry.message), model), ...baseRequest.messages],
+          }
+        : baseRequest
+      if (restored.length) {
+        const restoredContext = JSON.stringify({
+          system: request.system,
+          messages: request.messages,
+          tools: request.tools,
+        })
+        yield* SessionContextAssembly.prepare(db, {
+          sessionID: session.id,
+          style: contextStyle,
+          baselineSeq: system.baselineSeq,
+          messageSeqs: [...restored.map((entry) => entry.seq), ...entries.map((entry) => entry.seq)],
+          context: restoredContext,
+          estimatedTokens: Token.estimate(restoredContext),
+          contextLimit,
+        })
+      }
       const startSnapshot = yield* snapshots.capture()
       const publisher = createLLMEventPublisher(events, {
         sessionID: session.id,

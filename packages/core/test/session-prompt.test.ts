@@ -175,6 +175,7 @@ describe("SessionV2.prompt", () => {
         prompt: { text: "Use paged context", contextStyle: "paged" },
         resume: false,
       })
+      expect(yield* session.contextStyle(sessionID)).toBe("paged")
       expect(
         yield* db
           .select({ style: SessionContextStyleTable.style })
@@ -189,6 +190,7 @@ describe("SessionV2.prompt", () => {
         prompt: { text: "Continue with the selected context style" },
         resume: false,
       })
+      expect(yield* session.contextStyle(sessionID)).toBe("paged")
 
       const conflict = yield* session
         .prompt({

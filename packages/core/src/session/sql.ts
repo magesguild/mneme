@@ -14,6 +14,7 @@ import { Timestamps } from "../database/schema.sql"
 import type { SystemContext } from "../system-context/index"
 import { AgentV2 } from "../agent"
 import type { SessionContextStyle } from "./context-style"
+import type { EventV2 } from "../event"
 import type { Revert } from "@opencode-ai/schema/revert"
 
 type SessionMessageData = Omit<(typeof SessionMessage.Message)["Encoded"], "type" | "id">
@@ -186,3 +187,28 @@ export const SessionContextStyleTable = sqliteTable("session_context_style", {
     .notNull()
     .$default(() => Date.now()),
 })
+
+export const SessionPagedLedgerTable = sqliteTable(
+  "session_paged_ledger",
+  {
+    id: text().$type<EventV2.ID>().primaryKey(),
+    session_id: text()
+      .$type<SessionSchema.ID>()
+      .notNull()
+      .references(() => SessionTable.id, { onDelete: "cascade" }),
+    baseline_seq: integer().notNull(),
+    first_message_seq: integer(),
+    last_message_seq: integer(),
+    content_hash: text().notNull(),
+    estimated_tokens: integer().notNull(),
+    context_limit: integer().notNull(),
+    residency: text().notNull().default("resident"),
+    dirty_state: text().notNull().default("unclassified"),
+    page_out_reason: text(),
+    page_in_reason: text(),
+    time_created: integer()
+      .notNull()
+      .$default(() => Date.now()),
+  },
+  (table) => [index("session_paged_ledger_session_time_idx").on(table.session_id, table.time_created)],
+)

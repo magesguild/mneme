@@ -187,6 +187,24 @@ export default {
         );
       `)
       yield* tx.run(`
+        CREATE TABLE \`session_paged_ledger\` (
+          \`id\` text PRIMARY KEY,
+          \`session_id\` text NOT NULL,
+          \`baseline_seq\` integer NOT NULL,
+          \`first_message_seq\` integer,
+          \`last_message_seq\` integer,
+          \`content_hash\` text NOT NULL,
+          \`estimated_tokens\` integer NOT NULL,
+          \`context_limit\` integer NOT NULL,
+          \`residency\` text DEFAULT 'resident' NOT NULL,
+          \`dirty_state\` text DEFAULT 'unclassified' NOT NULL,
+          \`page_out_reason\` text,
+          \`page_in_reason\` text,
+          \`time_created\` integer NOT NULL,
+          CONSTRAINT \`fk_session_paged_ledger_session_id_session_id_fk\` FOREIGN KEY (\`session_id\`) REFERENCES \`session\`(\`id\`) ON DELETE CASCADE
+        );
+      `)
+      yield* tx.run(`
         CREATE TABLE \`session\` (
           \`id\` text PRIMARY KEY,
           \`project_id\` text NOT NULL,
@@ -273,6 +291,9 @@ export default {
         `CREATE INDEX \`session_message_session_time_created_id_idx\` ON \`session_message\` (\`session_id\`,\`time_created\`,\`id\`);`,
       )
       yield* tx.run(`CREATE INDEX \`session_message_time_created_idx\` ON \`session_message\` (\`time_created\`);`)
+      yield* tx.run(
+        `CREATE INDEX \`session_paged_ledger_session_time_idx\` ON \`session_paged_ledger\` (\`session_id\`,\`time_created\`);`,
+      )
       yield* tx.run(`CREATE INDEX \`session_project_idx\` ON \`session\` (\`project_id\`);`)
       yield* tx.run(`CREATE INDEX \`session_workspace_idx\` ON \`session\` (\`workspace_id\`);`)
       yield* tx.run(`CREATE INDEX \`session_parent_idx\` ON \`session\` (\`parent_id\`);`)
