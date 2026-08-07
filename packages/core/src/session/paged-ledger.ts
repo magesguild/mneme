@@ -24,6 +24,18 @@ export const DirtyState = Schema.Literals([
 ])
 export type DirtyState = typeof DirtyState.Type
 
+export class PageOutRefused extends Schema.TaggedErrorClass<PageOutRefused>()(
+  "SessionPagedLedger.PageOutRefused",
+  {
+    id: EventV2.ID,
+    dirtyState: Schema.String,
+  },
+) {
+  override get message() {
+    return `Cannot page out ${this.id} while its dirty state is ${this.dirtyState}`
+  }
+}
+
 type Observation = {
   readonly sessionID: SessionSchema.ID
   readonly baselineSeq: number
@@ -59,14 +71,35 @@ export const observe = Effect.fn("SessionPagedLedger.observe")(function* (
   return row.id
 })
 
+/** Mark a candidate checkpointed only after its durable preservation succeeds. */
+export const checkpoint = Effect.fn("SessionPagedLedger.checkpoint")(function* (
+  db: DatabaseService,
+  id: EventV2.ID,
+) {
+  yield* db
+    .update(SessionPagedLedgerTable)
+    .set({ dirty_state: "checkpointed" })
+    .where(eq(SessionPagedLedgerTable.id, id))
+    .run()
+    .pipe(Effect.orDie)
+})
+
 export const pageOut = Effect.fn("SessionPagedLedger.pageOut")(function* (
   db: DatabaseService,
   id: EventV2.ID,
   reason: string,
 ) {
+  const row = yield* db
+    .select({ dirtyState: SessionPagedLedgerTable.dirty_state })
+    .from(SessionPagedLedgerTable)
+    .where(eq(SessionPagedLedgerTable.id, id))
+    .get()
+    .pipe(Effect.orDie)
+  if (row && row.dirtyState !== "checkpointed")
+    return yield* new PageOutRefused({ id, dirtyState: row.dirtyState })
   yield* db
     .update(SessionPagedLedgerTable)
-    .set({ residency: "paged_out", dirty_state: "checkpointed", page_out_reason: reason })
+    .set({ residency: "paged_out", page_out_reason: reason })
     .where(eq(SessionPagedLedgerTable.id, id))
     .run()
     .pipe(Effect.orDie)

@@ -1,5 +1,5 @@
 import { describe, expect } from "bun:test"
-import { Effect } from "effect"
+import { Cause, Effect, Exit } from "effect"
 import { Database } from "@opencode-ai/core/database/database"
 import { AppNodeBuilder } from "@opencode-ai/core/effect/app-node-builder"
 import { LayerNode } from "@opencode-ai/core/effect/layer-node"
@@ -45,6 +45,19 @@ describe("SessionPagedLedger", () => {
         estimatedTokens: 20,
         contextLimit: 100,
       })
+      const refused = yield* SessionPagedLedger.pageOut(db, pageID, "compaction").pipe(Effect.exit)
+      expect(Exit.isFailure(refused)).toBe(true)
+      if (Exit.isFailure(refused)) {
+        expect(Cause.squash(refused.cause)).toEqual(
+          new SessionPagedLedger.PageOutRefused({ id: pageID, dirtyState: "unclassified" }),
+        )
+      }
+      expect((yield* db.select().from(SessionPagedLedgerTable).all().pipe(Effect.orDie))[0]).toMatchObject({
+        dirty_state: "unclassified",
+        residency: "resident",
+      })
+
+      yield* SessionPagedLedger.checkpoint(db, pageID)
       yield* SessionPagedLedger.pageOut(db, pageID, "compaction")
 
       const rows = yield* db.select().from(SessionPagedLedgerTable).all().pipe(Effect.orDie)
