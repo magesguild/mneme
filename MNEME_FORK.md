@@ -17,6 +17,12 @@ The inherited internal package and protocol names remain temporarily for
 implementation compatibility; they do not make Mneme's runtime state shared
 with OpenCode.
 
+The rebrand is intentionally surface-level. Internal OpenCode package names,
+module paths, flags, protocol identifiers, provider IDs, and compatibility
+schemas remain legacy names unless a concrete correctness, ownership, or
+security need makes changing one compelling. Their presence is not a claim
+that Mneme shares OpenCode runtime state.
+
 Mneme uses separate configuration, state, cache, data, session, database, log,
 plugin, skill, and project-identity namespaces. Mneme must never read or write
 an OpenCode session or configuration as part of ordinary operation.

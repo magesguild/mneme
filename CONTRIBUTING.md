@@ -49,7 +49,8 @@ from `packages/client`. Never edit generated sources directly.
 - `packages/app` contains the shared web interface.
 - `packages/plugin` contains the plugin API.
 - Mneme-owned user-facing paths and runtime state must use Mneme namespaces.
-- Internal inherited names may remain when they are compatibility surfaces.
+- Internal OpenCode names remain by default; change them only for a compelling
+  correctness, ownership, or security reason.
 
 Do not silently connect Mneme to OpenCode state, configuration, sessions, or
 databases. Changes that affect identity, persistence, permissions, providers,

@@ -15,9 +15,11 @@ and the hard-separation contract.
 - Global configuration: `~/.config/mneme/`
 - Releases: <https://github.com/magesguild/mneme/releases>
 
-Mneme must not read or write OpenCode configuration or runtime state during
-ordinary operation. Some internal package, provider, protocol, and compatibility
-names remain inherited where changing them would break an external contract.
+The rebrand is surface-level by design. Internal OpenCode package names,
+module paths, flags, provider IDs, protocol identifiers, and compatibility
+schemas remain legacy names unless there is a compelling correctness, ownership,
+or security reason to change them. Mneme must still never read or write OpenCode
+configuration or runtime state during ordinary operation.
 The initial version may match the source snapshot, but Mneme is an independent
 line of development rather than a downstream release stream.
 
