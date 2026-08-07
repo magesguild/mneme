@@ -1,6 +1,6 @@
 # Mneme fork status
 
-Mneme is a hard fork of OpenCode maintained by Mages Guild at
+Mneme is a distinct harness and hard fork maintained by Mages Guild at
 <https://github.com/magesguild/mneme>.
 
 Mneme retains the upstream MIT license and required upstream notices. It is not
@@ -17,7 +17,9 @@ The inherited internal package and protocol names remain temporarily for
 implementation compatibility; they do not make Mneme's runtime state shared
 with OpenCode.
 
-The rebrand is intentionally surface-level. Internal OpenCode package names,
+The rebrand is intentionally surface-level, but the harness boundary is not.
+Mneme has its own CLI, configuration discovery, lifecycle, and runtime state.
+Internal OpenCode package names,
 module paths, flags, protocol identifiers, provider IDs, and compatibility
 schemas remain legacy names unless a concrete correctness, ownership, or
 security need makes changing one compelling. Their presence is not a claim

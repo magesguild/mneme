@@ -1,6 +1,7 @@
 # Contributing to Mneme
 
-Mneme is maintained by Mages Guild as a hard fork. Contributions should make
+Mneme is maintained by Mages Guild as a distinct harness and hard fork.
+Contributions should make
 the Mneme product, its isolation boundary, its continuity, or its compatibility
 behavior clearer and safer.
 

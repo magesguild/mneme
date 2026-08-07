@@ -1,8 +1,8 @@
 # Mneme
 
-Mneme is the Mages Guild hard fork of an open-source AI coding agent. It keeps
-the familiar interaction model while giving the product its own runtime
-identity, configuration, state, and release boundary.
+Mneme is the Mages Guild hard fork of an open-source AI coding agent. It is a
+distinct harness: it keeps a familiar interaction model while owning its own
+CLI, configuration, lifecycle, runtime identity, state, and release boundary.
 
 See [MNEME_FORK.md](./MNEME_FORK.md) for attribution, compatibility boundaries,
 and the hard-separation contract.
