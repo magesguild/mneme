@@ -233,7 +233,10 @@ const layer = Layer.effect(
         contextLimit,
       })
       if (yield* compaction.compactIfNeeded({ sessionID: session.id, entries, model, request: baseRequest })) {
-        if (pagedObservation) yield* SessionPagedLedger.pageOut(db, pagedObservation, "compaction")
+        if (pagedObservation) {
+          yield* SessionPagedLedger.checkpoint(db, pagedObservation)
+          yield* SessionPagedLedger.pageOut(db, pagedObservation, "compaction")
+        }
         return yield* Effect.die(continueAfterCompaction(currentStep))
       }
       const restoration = yield* SessionContextAssembly.restore(db, {
