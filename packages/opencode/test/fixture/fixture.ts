@@ -1,5 +1,6 @@
 import { $ } from "bun"
 import { ConfigV1 } from "@opencode-ai/core/v1/config/config"
+import { Brand } from "@opencode-ai/core/brand"
 import * as fs from "fs/promises"
 import os from "os"
 import path from "path"
@@ -94,7 +95,7 @@ export async function tmpdir<T>(options?: TmpDirOptions<T>) {
   }
   if (options?.config) {
     await Bun.write(
-      path.join(dirpath, "opencode.json"),
+      path.join(dirpath, Brand.configFile),
       JSON.stringify({
         $schema: "https://opencode.ai/config.json",
         ...options.config,
