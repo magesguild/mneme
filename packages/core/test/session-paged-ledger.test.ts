@@ -156,7 +156,11 @@ describe("SessionPagedLedger", () => {
       expect(Exit.isFailure(refused)).toBe(true)
       if (Exit.isFailure(refused)) {
         expect(Cause.squash(refused.cause)).toEqual(
-          new SessionPagedLedger.PageOutRefused({ id: pageID, dirtyState: "unsaved_observation" }),
+          new SessionPagedLedger.PageOutRefused({
+            id: pageID,
+            dirtyState: "unsaved_observation",
+            residency: "resident",
+          }),
         )
       }
       expect((yield* db.select().from(SessionPagedLedgerTable).all().pipe(Effect.orDie))[0]).toMatchObject({
@@ -168,6 +172,12 @@ describe("SessionPagedLedger", () => {
 
       yield* SessionPagedLedger.checkpoint(db, pageID, "test-checkpoint")
       yield* SessionPagedLedger.pageOut(db, pageID, "compaction")
+      const refusedPageOut = yield* SessionPagedLedger.pageOut(db, pageID, "duplicate-page-out").pipe(Effect.exit)
+      expect(Exit.isFailure(refusedPageOut)).toBe(true)
+      if (Exit.isFailure(refusedPageOut))
+        expect(Cause.squash(refusedPageOut.cause)).toEqual(
+          new SessionPagedLedger.PageOutRefused({ id: pageID, dirtyState: "checkpointed", residency: "paged_out" }),
+        )
 
       const rows = yield* db.select().from(SessionPagedLedgerTable).all().pipe(Effect.orDie)
       expect(rows).toHaveLength(1)

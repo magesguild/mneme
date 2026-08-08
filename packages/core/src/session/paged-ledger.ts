@@ -31,10 +31,11 @@ export class PageOutRefused extends Schema.TaggedErrorClass<PageOutRefused>()(
   {
     id: EventV2.ID,
     dirtyState: Schema.String,
+    residency: Schema.String,
   },
 ) {
   override get message() {
-    return `Cannot page out ${this.id} while its dirty state is ${this.dirtyState}`
+    return `Cannot page out ${this.id} while its dirty state is ${this.dirtyState} and residency is ${this.residency}`
   }
 }
 
@@ -217,13 +218,13 @@ export const pageOut = Effect.fn("SessionPagedLedger.pageOut")(function* (
   reason: string,
 ) {
   const row = yield* db
-    .select({ dirtyState: SessionPagedLedgerTable.dirty_state })
+    .select({ dirtyState: SessionPagedLedgerTable.dirty_state, residency: SessionPagedLedgerTable.residency })
     .from(SessionPagedLedgerTable)
     .where(eq(SessionPagedLedgerTable.id, id))
     .get()
     .pipe(Effect.orDie)
-  if (row && row.dirtyState !== "checkpointed")
-    return yield* new PageOutRefused({ id, dirtyState: row.dirtyState })
+  if (row && (row.dirtyState !== "checkpointed" || row.residency !== "resident"))
+    return yield* new PageOutRefused({ id, dirtyState: row.dirtyState, residency: row.residency })
   yield* db
     .update(SessionPagedLedgerTable)
     .set({ residency: "paged_out", page_out_reason: reason })
