@@ -13,6 +13,7 @@ import { runtime } from "./runtime"
 import type { ActiveScenario, Options, ProjectOptions, Result, Scenario, ScenarioContext, SeededContext } from "./types"
 import { ProviderV2 } from "@opencode-ai/core/provider"
 import { ModelV2 } from "@opencode-ai/core/model"
+import { SessionSchema } from "@opencode-ai/core/session/schema"
 
 export function runScenario(options: Options) {
   return (scenario: Scenario) => {
@@ -138,6 +139,21 @@ function withContext<A, E>(
           sessionGet: (sessionID) =>
             run(modules.Session.Service.use((svc) => svc.get(sessionID))).pipe(
               Effect.catchCause(() => Effect.succeed(undefined)),
+            ),
+          pagedLedger: (sessionID, input = {}) =>
+            run(
+              Effect.gen(function* () {
+                const { db } = yield* modules.Database.Service
+                yield* modules.SessionPagedLedger.observe(db, {
+                  sessionID: SessionSchema.ID.make(sessionID),
+                  baselineSeq: input.baselineSeq ?? 1,
+                  messageSeqs: input.messageSeqs ?? [1],
+                  context: input.context ?? "private provider context",
+                  estimatedTokens: input.estimatedTokens ?? 10,
+                  contextLimit: input.contextLimit ?? 100,
+                  dirtyState: { state: "unclassified", reason: "no_authoritative_dirty_state" },
+                })
+              }),
             ),
           project: () =>
             Effect.sync(() => {

@@ -36,7 +36,7 @@ const ledgerEntry = (row: SessionPagedLedger.Info) => {
     ...(isDirtyStateReason(row.dirty_state_reason) ? { dirtyStateReason: row.dirty_state_reason } : {}),
     ...(row.page_out_reason === "compaction" ? { pageOutReason: row.page_out_reason } : {}),
     ...(row.page_in_reason === "restored-exact-range" ? { pageInReason: row.page_in_reason } : {}),
-    createdAt: DateTime.makeUnsafe(row.time_created),
+    createdAt: row.time_created,
   }).pipe(
     Effect.mapError(
       () => new UnknownError({ message: "Paged ledger contains invalid inspection metadata", ref: crypto.randomUUID() }),

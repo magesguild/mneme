@@ -20,6 +20,8 @@
 import { Effect } from "effect"
 import { OpenApi } from "effect/unstable/httpapi"
 import { Brand } from "@opencode-ai/core/brand"
+import { Session } from "@opencode-ai/schema/session"
+import { SessionLedgerCursor } from "@opencode-ai/protocol/groups/session"
 import { TestLLMServer } from "../../lib/llm-server"
 import path from "path"
 import { array, boolean, check, isRecord, message, object, stable } from "./assertions"
@@ -1104,10 +1106,17 @@ const scenarios: Scenario[] = [
     .json(400, object, "status"),
   http.protected
     .get("/api/session/{sessionID}/ledger", "v2.session.ledger")
-    .seeded((ctx) => ctx.session({ title: "Session ledger" }))
+    .seeded((ctx) =>
+      Effect.gen(function* () {
+        const session = yield* ctx.session({ title: "Session ledger" })
+        yield* ctx.pagedLedger(session.id, { messageSeqs: [1], context: "private context one" })
+        yield* ctx.pagedLedger(session.id, { messageSeqs: [2], context: "private context two" })
+        return session
+      }),
+    )
     .at((ctx) => ({
       path: `${route("/api/session/{sessionID}/ledger", { sessionID: ctx.state.id })}?${new URLSearchParams({
-        limit: "2",
+        limit: "1",
         order: "asc",
       })}`,
       headers: ctx.headers(),
@@ -1117,11 +1126,47 @@ const scenarios: Scenario[] = [
       (body) => {
         object(body)
         array(body.data)
-        check(typeof body.hasMore === "boolean", "Expected a ledger exhaustion signal")
+        check(body.data.length === 1, "Expected one ledger entry in the first page")
+        check(body.hasMore === true, "Expected another ledger entry")
         object(body.cursor)
+        const entry = body.data[0]
+        if (isRecord(entry)) {
+          check(entry.content === undefined, "Ledger must not expose raw context")
+          check(entry.contentHash === undefined, "Ledger must not expose content hashes")
+          check(entry.messageSeqs === undefined, "Ledger must not expose unbounded message sequences")
+        }
       },
       "none",
     ),
+  http.protected
+    .get("/api/session/{sessionID}/ledger", "v2.session.ledger.cursor")
+    .seeded((ctx) =>
+      Effect.gen(function* () {
+        const session = yield* ctx.session({ title: "Session ledger cursor" })
+        yield* ctx.pagedLedger(session.id, { messageSeqs: [1], context: "private context one" })
+        yield* ctx.pagedLedger(session.id, { messageSeqs: [2], context: "private context two" })
+        return session
+      }),
+    )
+    .at((ctx) => ({
+      path: `${route("/api/session/{sessionID}/ledger", { sessionID: ctx.state.id })}?${new URLSearchParams({
+        cursor: SessionLedgerCursor.make({
+          version: 1,
+          sessionID: Session.ID.make(ctx.state.id),
+          limit: 1,
+          order: "asc",
+          direction: "next",
+          sequence: 0,
+        }),
+      })}`,
+      headers: ctx.headers(),
+    }))
+    .json(200, (body) => {
+      object(body)
+      array(body.data)
+      check(body.data.length === 1, "Expected one continuation ledger entry")
+      check(body.hasMore === false, "Expected the continuation to exhaust the ledger")
+    }),
   http.protected
     .get("/api/session/{sessionID}/ledger", "v2.session.ledger.missing")
     .at((ctx) => ({

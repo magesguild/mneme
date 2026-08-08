@@ -57,6 +57,7 @@ export type ScenarioContext = {
   file: (name: string, content: string) => Effect.Effect<void>
   session: (input?: { title?: string; parentID?: SessionID }) => Effect.Effect<SessionInfo>
   sessionGet: (sessionID: SessionID) => Effect.Effect<SessionInfo | undefined>
+  pagedLedger: (sessionID: SessionID, input?: LedgerSeedInput) => Effect.Effect<void>
   project: () => Effect.Effect<Project.Info>
   message: (sessionID: SessionID, input?: { text?: string }) => Effect.Effect<MessageSeed>
   messages: (sessionID: SessionID) => Effect.Effect<SessionV1.WithParts[]>
@@ -66,6 +67,14 @@ export type ScenarioContext = {
   llmText: (value: string) => Effect.Effect<void>
   llmWait: (count: number) => Effect.Effect<void>
   tuiRequest: (request: { path: string; body: unknown }) => Effect.Effect<void>
+}
+
+export type LedgerSeedInput = {
+  baselineSeq?: number
+  messageSeqs?: ReadonlyArray<number>
+  context?: string
+  estimatedTokens?: number
+  contextLimit?: number
 }
 
 /** Scenario context after `.seeded(...)`; `state` preserves the seed return type in the DSL. */
