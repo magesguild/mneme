@@ -24,6 +24,7 @@ export type Restoration = {
   readonly pageID: EventV2.ID
   readonly firstMessageSeq: number
   readonly lastMessageSeq: number
+  readonly messageSeqs: ReadonlyArray<number> | undefined
 }
 
 /**
@@ -64,5 +65,6 @@ export const restore = Effect.fn("SessionContextAssembly.restore")(function* (
     pageID: page.id,
     firstMessageSeq: page.first_message_seq,
     lastMessageSeq: page.last_message_seq,
+    messageSeqs: page.message_seqs ?? undefined,
   }
 })

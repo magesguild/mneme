@@ -111,14 +111,25 @@ export const assertRestoredRange = Effect.fn("SessionPagedLedger.assertRestoredR
   id: EventV2.ID,
   firstMessageSeq: number,
   lastMessageSeq: number,
+  messageSeqs: ReadonlyArray<number> | undefined,
   entries: ReadonlyArray<{ readonly seq: number }>,
 ) {
-  if (entries[0]?.seq !== firstMessageSeq || entries.at(-1)?.seq !== lastMessageSeq)
+  const actualMessageSeqs = entries.map((entry) => entry.seq)
+  const exactSequence =
+    messageSeqs === undefined ||
+    (actualMessageSeqs.length === messageSeqs.length &&
+      actualMessageSeqs.every((seq, index) => seq === messageSeqs[index]))
+  if (!exactSequence || entries[0]?.seq !== firstMessageSeq || entries.at(-1)?.seq !== lastMessageSeq)
     return yield* new PageRestoreRefused({
       id,
       firstMessageSeq,
       lastMessageSeq,
-      reason: entries.length === 0 ? "source_range_missing" : "source_range_incomplete",
+      reason:
+        entries.length === 0
+          ? "source_range_missing"
+          : messageSeqs === undefined
+            ? "source_range_incomplete"
+            : "source_sequence_mismatch",
     })
 })
 
@@ -136,6 +147,7 @@ export const observe = Effect.fn("SessionPagedLedger.observe")(function* (
       baseline_seq: observation.baselineSeq,
       first_message_seq: messageSeqs[0],
       last_message_seq: messageSeqs.at(-1),
+      message_seqs: messageSeqs,
       content_hash: contentHash(observation.context),
       estimated_tokens: observation.estimatedTokens,
       context_limit: observation.contextLimit,
