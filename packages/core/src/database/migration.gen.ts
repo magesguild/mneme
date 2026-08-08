@@ -45,5 +45,7 @@ export const migrations = (
     import("./migration/20260807044509_famous_doctor_strange"),
     import("./migration/20260808043645_paged_message_sequences"),
     import("./migration/20260808044152_dirty_state_reason"),
+    import("./migration/20260808053019_paged_ledger_sequence"),
+    import("./migration/20260808053059_paged_ledger_sequence_index"),
   ])
 ).map((module) => module.default) satisfies DatabaseMigration.Migration[]

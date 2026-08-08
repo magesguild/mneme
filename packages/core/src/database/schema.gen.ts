@@ -191,6 +191,7 @@ export default {
           \`id\` text PRIMARY KEY,
           \`session_id\` text NOT NULL,
           \`baseline_seq\` integer NOT NULL,
+          \`ledger_seq\` integer,
           \`first_message_seq\` integer,
           \`last_message_seq\` integer,
           \`message_seqs\` text,
@@ -295,6 +296,9 @@ export default {
       yield* tx.run(`CREATE INDEX \`session_message_time_created_idx\` ON \`session_message\` (\`time_created\`);`)
       yield* tx.run(
         `CREATE INDEX \`session_paged_ledger_session_time_idx\` ON \`session_paged_ledger\` (\`session_id\`,\`time_created\`);`,
+      )
+      yield* tx.run(
+        `CREATE UNIQUE INDEX \`session_paged_ledger_session_seq_idx\` ON \`session_paged_ledger\` (\`session_id\`,\`ledger_seq\`);`,
       )
       yield* tx.run(`CREATE INDEX \`session_project_idx\` ON \`session\` (\`project_id\`);`)
       yield* tx.run(`CREATE INDEX \`session_workspace_idx\` ON \`session\` (\`workspace_id\`);`)

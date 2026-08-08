@@ -176,7 +176,7 @@ describe("SessionV2.prompt", () => {
         resume: false,
       })
       expect(yield* session.contextStyle(sessionID)).toBe("paged")
-      expect(yield* session.pagedLedger(sessionID)).toEqual([])
+      expect(yield* session.pagedLedger({ sessionID })).toMatchObject({ data: [], hasMore: false })
       expect(
         yield* db
           .select({ style: SessionContextStyleTable.style })
