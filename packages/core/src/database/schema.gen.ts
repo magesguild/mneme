@@ -193,6 +193,7 @@ export default {
           \`baseline_seq\` integer NOT NULL,
           \`first_message_seq\` integer,
           \`last_message_seq\` integer,
+          \`message_seqs\` text,
           \`content_hash\` text NOT NULL,
           \`estimated_tokens\` integer NOT NULL,
           \`context_limit\` integer NOT NULL,

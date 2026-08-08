@@ -25,7 +25,7 @@ describe("SessionPagedLedger", () => {
   it.effect("refuses to mark a missing source range resident", () =>
     Effect.gen(function* () {
       const pageID = EventV2.ID.create()
-      const refused = yield* SessionPagedLedger.assertRestoredRange(pageID, 3, 7, []).pipe(Effect.exit)
+      const refused = yield* SessionPagedLedger.assertRestoredRange(pageID, 3, 7, undefined, []).pipe(Effect.exit)
       expect(Exit.isFailure(refused)).toBe(true)
       if (Exit.isFailure(refused)) {
         expect(Cause.squash(refused.cause)).toEqual(
@@ -37,6 +37,14 @@ describe("SessionPagedLedger", () => {
           }),
         )
       }
+
+      const mismatch = yield* SessionPagedLedger.assertRestoredRange(pageID, 3, 7, [3, 5, 7], [
+        { seq: 3 },
+        { seq: 7 },
+      ]).pipe(Effect.exit)
+      expect(Exit.isFailure(mismatch)).toBe(true)
+      if (Exit.isFailure(mismatch))
+        expect(Cause.squash(mismatch.cause)).toMatchObject({ reason: "source_sequence_mismatch" })
     }),
   )
 
@@ -144,6 +152,7 @@ describe("SessionPagedLedger", () => {
       expect((yield* db.select().from(SessionPagedLedgerTable).all().pipe(Effect.orDie))[0]).toMatchObject({
         dirty_state: "unsaved_observation",
         residency: "resident",
+        message_seqs: [3, 5, 7],
       })
 
       yield* SessionPagedLedger.checkpoint(db, pageID)

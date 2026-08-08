@@ -259,6 +259,7 @@ const layer = Layer.effect(
           restoration.pageID,
           restoration.firstMessageSeq,
           restoration.lastMessageSeq,
+          restoration.messageSeqs,
           restored,
         )
         yield* SessionPagedLedger.pageIn(db, restoration.pageID, "restored-exact-range")

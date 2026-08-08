@@ -199,6 +199,7 @@ export const SessionPagedLedgerTable = sqliteTable(
     baseline_seq: integer().notNull(),
     first_message_seq: integer(),
     last_message_seq: integer(),
+    message_seqs: text({ mode: "json" }).$type<ReadonlyArray<number>>(),
     content_hash: text().notNull(),
     estimated_tokens: integer().notNull(),
     context_limit: integer().notNull(),
