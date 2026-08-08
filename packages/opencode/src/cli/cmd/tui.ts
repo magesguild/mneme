@@ -105,6 +105,10 @@ export const TuiThreadCommand = cmd({
         type: "string",
         describe: "agent to use",
       })
+      .option("context-style", {
+        choices: ["standard", "paged"] as const,
+        describe: "context assembly style for the first prompt",
+      })
       .option("auto", {
         type: "boolean",
         describe: "auto-approve permissions that are not explicitly denied (dangerous!)",
@@ -150,6 +154,11 @@ export const TuiThreadCommand = cmd({
     const noReplay = args.replay === false || args.noReplay === true
 
     if (args.mini) {
+      if (args.contextStyle) {
+        UI.error("--context-style requires the full TUI")
+        process.exitCode = 1
+        return
+      }
       const network = ["--port", "--hostname", "--mdns", "--no-mdns", "--mdns-domain", "--cors"].find((option) =>
         process.argv.some((arg) => arg === option || arg.startsWith(option + "=")),
       )
@@ -288,6 +297,7 @@ export const TuiThreadCommand = cmd({
               continue: args.continue,
               sessionID: args.session,
               agent: args.agent,
+              contextStyle: args.contextStyle,
               model: args.model,
               prompt,
               fork: args.fork,

@@ -1090,25 +1090,34 @@ export function Prompt(props: PromptProps) {
       })
     } else {
       move.startSubmit()
-      sdk.client.session
-        .prompt(
-          {
-            sessionID,
-            ...selectedModel,
-            agent: agent.name,
-            model: selectedModel,
-            variant,
-            parts: [
-              ...editorParts,
-              {
-                type: "text",
-                text: inputText,
-              },
-              ...nonTextParts,
-            ],
-          },
-          { throwOnError: true },
-        )
+      const promptRequest = args.contextStyle
+        ? sdk.client.v2.session.prompt(
+            {
+              sessionID,
+              prompt: { text: inputText, contextStyle: args.contextStyle },
+              resume: true,
+            },
+            { throwOnError: true },
+          )
+        : sdk.client.session.prompt(
+            {
+              sessionID,
+              ...selectedModel,
+              agent: agent.name,
+              model: selectedModel,
+              variant,
+              parts: [
+                ...editorParts,
+                {
+                  type: "text",
+                  text: inputText,
+                },
+                ...nonTextParts,
+              ],
+            },
+            { throwOnError: true },
+          )
+      promptRequest
         .catch((error) => {
           toast.show({
             title: "Failed to send prompt",
