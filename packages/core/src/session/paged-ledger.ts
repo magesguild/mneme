@@ -64,6 +64,18 @@ export class PageInRefused extends Schema.TaggedErrorClass<PageInRefused>()(
   }
 }
 
+export class CheckpointRefused extends Schema.TaggedErrorClass<CheckpointRefused>()(
+  "SessionPagedLedger.CheckpointRefused",
+  {
+    id: EventV2.ID,
+    residency: Schema.String,
+  },
+) {
+  override get message() {
+    return `Cannot checkpoint ${this.id} while its residency is ${this.residency}`
+  }
+}
+
 type Observation = {
   readonly sessionID: SessionSchema.ID
   readonly baselineSeq: number
@@ -184,6 +196,13 @@ export const checkpoint = Effect.fn("SessionPagedLedger.checkpoint")(function* (
   id: EventV2.ID,
   reason: string,
 ) {
+  const row = yield* db
+    .select({ residency: SessionPagedLedgerTable.residency })
+    .from(SessionPagedLedgerTable)
+    .where(eq(SessionPagedLedgerTable.id, id))
+    .get()
+    .pipe(Effect.orDie)
+  if (row && row.residency !== "resident") return yield* new CheckpointRefused({ id, residency: row.residency })
   yield* db
     .update(SessionPagedLedgerTable)
     .set({ dirty_state: "checkpointed", dirty_state_reason: reason })

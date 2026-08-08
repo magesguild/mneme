@@ -186,6 +186,13 @@ describe("SessionPagedLedger", () => {
       expect(rows[0]?.content_hash).toBe(SessionPagedLedger.contentHash(context))
       expect((yield* SessionPagedLedger.latestPagedOut(db, sessionID))?.id).toBe(pageID)
 
+      const refusedCheckpoint = yield* SessionPagedLedger.checkpoint(db, pageID, "late-checkpoint").pipe(Effect.exit)
+      expect(Exit.isFailure(refusedCheckpoint)).toBe(true)
+      if (Exit.isFailure(refusedCheckpoint))
+        expect(Cause.squash(refusedCheckpoint.cause)).toEqual(
+          new SessionPagedLedger.CheckpointRefused({ id: pageID, residency: "paged_out" }),
+        )
+
       yield* SessionPagedLedger.pageIn(db, pageID, "test-restoration")
       const refusedPageIn = yield* SessionPagedLedger.pageIn(db, pageID, "duplicate-restoration").pipe(Effect.exit)
       expect(Exit.isFailure(refusedPageIn)).toBe(true)
