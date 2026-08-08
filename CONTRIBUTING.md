@@ -16,6 +16,7 @@ Requirements: Bun 1.3.14. From the repository root:
 
 ```bash
 bash script/bootstrap.sh
+export PATH="$PWD/.tools/bun/bin:$PATH"
 bun dev
 ```
 

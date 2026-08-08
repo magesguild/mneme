@@ -49,6 +49,7 @@ pinned toolchain without changing shell startup files.
 
 ```bash
 bash script/bootstrap.sh
+export PATH="$PWD/.tools/bun/bin:$PATH"
 bun dev
 ```
 
