@@ -67,10 +67,14 @@ describe("SessionPagedLedger", () => {
         time: { created },
       })
 
-      expect(SessionPagedLedger.classify([assistant])).toBe("tool_result_pending")
-      expect(SessionPagedLedger.classify([SessionMessage.Assistant.make({ ...assistant, content: [] })])).toBe(
-        "unclassified",
-      )
+      expect(SessionPagedLedger.classify([assistant])).toEqual({
+        state: "tool_result_pending",
+        reason: "unsettled_tool_state",
+      })
+      expect(SessionPagedLedger.classify([SessionMessage.Assistant.make({ ...assistant, content: [] })])).toEqual({
+        state: "unclassified",
+        reason: "no_authoritative_dirty_state",
+      })
     }),
   )
 
@@ -94,7 +98,10 @@ describe("SessionPagedLedger", () => {
         .run()
         .pipe(Effect.orDie)
 
-      expect(yield* SessionPagedLedger.classifyDurable(db, sessionID, [])).toBe("summary_pending")
+      expect(yield* SessionPagedLedger.classifyDurable(db, sessionID, [])).toEqual({
+        state: "summary_pending",
+        reason: "unsettled_compaction",
+      })
 
       yield* db
         .insert(EventTable)
@@ -107,7 +114,10 @@ describe("SessionPagedLedger", () => {
         })
         .run()
         .pipe(Effect.orDie)
-      expect(yield* SessionPagedLedger.classifyDurable(db, sessionID, [])).toBe("unclassified")
+      expect(yield* SessionPagedLedger.classifyDurable(db, sessionID, [])).toEqual({
+        state: "unclassified",
+        reason: "no_authoritative_dirty_state",
+      })
     }),
   )
 
@@ -140,7 +150,7 @@ describe("SessionPagedLedger", () => {
         context,
         estimatedTokens: 20,
         contextLimit: 100,
-        dirtyState: "unsaved_observation",
+        dirtyState: { state: "unsaved_observation", reason: "test-observation" },
       })
       const refused = yield* SessionPagedLedger.pageOut(db, pageID, "compaction").pipe(Effect.exit)
       expect(Exit.isFailure(refused)).toBe(true)
@@ -151,11 +161,12 @@ describe("SessionPagedLedger", () => {
       }
       expect((yield* db.select().from(SessionPagedLedgerTable).all().pipe(Effect.orDie))[0]).toMatchObject({
         dirty_state: "unsaved_observation",
+        dirty_state_reason: "test-observation",
         residency: "resident",
         message_seqs: [3, 5, 7],
       })
 
-      yield* SessionPagedLedger.checkpoint(db, pageID)
+      yield* SessionPagedLedger.checkpoint(db, pageID, "test-checkpoint")
       yield* SessionPagedLedger.pageOut(db, pageID, "compaction")
 
       const rows = yield* db.select().from(SessionPagedLedgerTable).all().pipe(Effect.orDie)

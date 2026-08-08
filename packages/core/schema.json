@@ -1,9 +1,9 @@
 {
   "version": "7",
   "dialect": "sqlite",
-  "id": "3da18195-9784-4a7c-afdf-d8deea4d70f3",
+  "id": "4fb0bb7f-26ec-4059-a4af-e6bf0436325a",
   "prevIds": [
-    "451bd66e-18b0-4e1d-bf1e-8049db0bad76"
+    "3da18195-9784-4a7c-afdf-d8deea4d70f3"
   ],
   "ddl": [
     {
@@ -1207,6 +1207,16 @@
       "default": "'unclassified'",
       "generated": null,
       "name": "dirty_state",
+      "entityType": "columns",
+      "table": "session_paged_ledger"
+    },
+    {
+      "type": "text",
+      "notNull": false,
+      "autoincrement": false,
+      "default": null,
+      "generated": null,
+      "name": "dirty_state_reason",
       "entityType": "columns",
       "table": "session_paged_ledger"
     },

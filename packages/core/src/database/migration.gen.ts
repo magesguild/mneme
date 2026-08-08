@@ -44,5 +44,6 @@ export const migrations = (
     import("./migration/20260807042918_hot_microchip"),
     import("./migration/20260807044509_famous_doctor_strange"),
     import("./migration/20260808043645_paged_message_sequences"),
+    import("./migration/20260808044152_dirty_state_reason"),
   ])
 ).map((module) => module.default) satisfies DatabaseMigration.Migration[]

@@ -235,7 +235,7 @@ const layer = Layer.effect(
       })
       if (yield* compaction.compactIfNeeded({ sessionID: session.id, entries, model, request: baseRequest })) {
         if (pagedObservation) {
-          yield* SessionPagedLedger.checkpoint(db, pagedObservation)
+          yield* SessionPagedLedger.checkpoint(db, pagedObservation, "compaction-completed")
           yield* SessionPagedLedger.pageOut(db, pagedObservation, "compaction")
         }
         return yield* Effect.die(continueAfterCompaction(currentStep))

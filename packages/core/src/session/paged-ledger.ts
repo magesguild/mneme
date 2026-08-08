@@ -71,13 +71,18 @@ type Observation = {
   readonly context: string
   readonly estimatedTokens: number
   readonly contextLimit: number
-  readonly dirtyState: DirtyState
+  readonly dirtyState: Classification
+}
+
+export type Classification = {
+  readonly state: DirtyState
+  readonly reason: string
 }
 
 export const contentHash = (context: string) => createHash("sha256").update(context).digest("hex")
 
 /** Classify only durable session evidence; semantic authorship remains unclassified. */
-export const classify = (messages: ReadonlyArray<SessionMessage.Message>): DirtyState =>
+export const classify = (messages: ReadonlyArray<SessionMessage.Message>): Classification =>
   messages.some(
     (message) =>
       message.type === "assistant" &&
@@ -85,8 +90,8 @@ export const classify = (messages: ReadonlyArray<SessionMessage.Message>): Dirty
         (part) => part.type === "tool" && (part.state.status === "pending" || part.state.status === "running"),
       ),
   )
-    ? "tool_result_pending"
-    : "unclassified"
+    ? { state: "tool_result_pending", reason: "unsettled_tool_state" }
+    : { state: "unclassified", reason: "no_authoritative_dirty_state" }
 
 const latestCompactionEvent = Effect.fn("SessionPagedLedger.latestCompactionEvent")(function* (
   db: DatabaseService,
@@ -110,12 +115,13 @@ export const classifyDurable = Effect.fn("SessionPagedLedger.classifyDurable")(f
   messages: ReadonlyArray<SessionMessage.Message>,
 ) {
   const classified = classify(messages)
-  if (classified !== "unclassified") return classified
+  if (classified.state !== "unclassified") return classified
   const [started, ended] = yield* Effect.all([
     latestCompactionEvent(db, sessionID, "session.next.compaction.started"),
     latestCompactionEvent(db, sessionID, "session.next.compaction.ended"),
   ])
-  if (started !== undefined && (ended === undefined || started.seq > ended.seq)) return "summary_pending"
+  if (started !== undefined && (ended === undefined || started.seq > ended.seq))
+    return { state: "summary_pending" as const, reason: "unsettled_compaction" }
   return classified
 })
 
@@ -163,7 +169,8 @@ export const observe = Effect.fn("SessionPagedLedger.observe")(function* (
       content_hash: contentHash(observation.context),
       estimated_tokens: observation.estimatedTokens,
       context_limit: observation.contextLimit,
-      dirty_state: observation.dirtyState,
+      dirty_state: observation.dirtyState.state,
+      dirty_state_reason: observation.dirtyState.reason,
     })
     .returning({ id: SessionPagedLedgerTable.id })
     .get()
@@ -175,10 +182,11 @@ export const observe = Effect.fn("SessionPagedLedger.observe")(function* (
 export const checkpoint = Effect.fn("SessionPagedLedger.checkpoint")(function* (
   db: DatabaseService,
   id: EventV2.ID,
+  reason: string,
 ) {
   yield* db
     .update(SessionPagedLedgerTable)
-    .set({ dirty_state: "checkpointed" })
+    .set({ dirty_state: "checkpointed", dirty_state_reason: reason })
     .where(eq(SessionPagedLedgerTable.id, id))
     .run()
     .pipe(Effect.orDie)
