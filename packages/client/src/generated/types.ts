@@ -397,6 +397,7 @@ export type SessionsPromptInput = {
         readonly name: string
         readonly source?: { readonly start: number; readonly end: number; readonly text: string }
       }>
+      readonly contextStyle?: "standard" | "paged"
     }
     readonly delivery?: "steer" | "queue" | null
     readonly resume?: boolean | null
@@ -415,6 +416,7 @@ export type SessionsPromptInput = {
         readonly name: string
         readonly source?: { readonly start: number; readonly end: number; readonly text: string }
       }>
+      readonly contextStyle?: "standard" | "paged"
     }
     readonly delivery?: "steer" | "queue" | null
     readonly resume?: boolean | null
@@ -433,6 +435,7 @@ export type SessionsPromptInput = {
         readonly name: string
         readonly source?: { readonly start: number; readonly end: number; readonly text: string }
       }>
+      readonly contextStyle?: "standard" | "paged"
     }
     readonly delivery?: "steer" | "queue" | null
     readonly resume?: boolean | null
@@ -451,6 +454,7 @@ export type SessionsPromptInput = {
         readonly name: string
         readonly source?: { readonly start: number; readonly end: number; readonly text: string }
       }>
+      readonly contextStyle?: "standard" | "paged"
     }
     readonly delivery?: "steer" | "queue" | null
     readonly resume?: boolean | null
@@ -1134,6 +1138,57 @@ export type SessionsHistoryOutput = {
       }
   >
   readonly hasMore: boolean
+}
+
+export type SessionsLedgerInput = {
+  readonly sessionID: { readonly sessionID: string }["sessionID"]
+  readonly limit?: {
+    readonly limit?: number | undefined
+    readonly order?: "asc" | "desc" | undefined
+    readonly cursor?: string | undefined
+  }["limit"]
+  readonly order?: {
+    readonly limit?: number | undefined
+    readonly order?: "asc" | "desc" | undefined
+    readonly cursor?: string | undefined
+  }["order"]
+  readonly cursor?: {
+    readonly limit?: number | undefined
+    readonly order?: "asc" | "desc" | undefined
+    readonly cursor?: string | undefined
+  }["cursor"]
+}
+
+export type SessionsLedgerOutput = {
+  readonly data: ReadonlyArray<{
+    readonly id: string
+    readonly sequence: number
+    readonly baselineSequence: number
+    readonly messageRange?: { readonly first: number; readonly last: number }
+    readonly sourceCompleteness: "exact" | "legacy_limited"
+    readonly estimatedTokens: number
+    readonly contextLimit: number
+    readonly residency: "resident" | "paged_out"
+    readonly dirtyState:
+      | "unclassified"
+      | "checkpointed"
+      | "unsaved_observation"
+      | "new_decision"
+      | "unresolved_uncertainty"
+      | "tool_result_pending"
+      | "private_unapproved"
+      | "summary_pending"
+    readonly dirtyStateReason?:
+      | "no_authoritative_dirty_state"
+      | "unsettled_tool_state"
+      | "unsettled_compaction"
+      | "compaction-completed"
+    readonly pageOutReason?: "compaction"
+    readonly pageInReason?: "restored-exact-range"
+    readonly createdAt: number
+  }>
+  readonly hasMore: boolean
+  readonly cursor: { readonly previous?: string; readonly next?: string }
 }
 
 export type SessionsEventsInput = {

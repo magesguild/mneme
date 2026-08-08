@@ -2709,6 +2709,7 @@ export type PromptInput = {
   text: string
   files?: Array<PromptInputFileAttachment>
   agents?: Array<PromptAgentAttachment>
+  contextStyle?: "standard" | "paged"
 }
 
 export type ConflictError = {
@@ -4768,6 +4769,48 @@ export type SessionNextRevertCommitted = {
     timestamp: number
     sessionID: string
     messageID: string
+  }
+}
+
+export type SessionLedgerMessageRange = {
+  first: number
+  last: number
+}
+
+export type SessionLedgerEntry = {
+  id: string
+  sequence: number
+  baselineSequence: number
+  messageRange?: SessionLedgerMessageRange
+  sourceCompleteness: "exact" | "legacy_limited"
+  estimatedTokens: number
+  contextLimit: number
+  residency: "resident" | "paged_out"
+  dirtyState:
+    | "unclassified"
+    | "checkpointed"
+    | "unsaved_observation"
+    | "new_decision"
+    | "unresolved_uncertainty"
+    | "tool_result_pending"
+    | "private_unapproved"
+    | "summary_pending"
+  dirtyStateReason?:
+    | "no_authoritative_dirty_state"
+    | "unsettled_tool_state"
+    | "unsettled_compaction"
+    | "compaction-completed"
+  pageOutReason?: "compaction"
+  pageInReason?: "restored-exact-range"
+  createdAt: number
+}
+
+export type SessionLedgerPage = {
+  data: Array<SessionLedgerEntry>
+  hasMore: boolean
+  cursor: {
+    previous?: string
+    next?: string
   }
 }
 
@@ -11870,6 +11913,49 @@ export type V2SessionHistoryResponses = {
 }
 
 export type V2SessionHistoryResponse = V2SessionHistoryResponses[keyof V2SessionHistoryResponses]
+
+export type V2SessionLedgerData = {
+  body?: never
+  path: {
+    sessionID: string
+  }
+  query?: {
+    limit?: string
+    order?: "asc" | "desc"
+    cursor?: string
+  }
+  url: "/api/session/{sessionID}/ledger"
+}
+
+export type V2SessionLedgerErrors = {
+  /**
+   * InvalidCursorError | InvalidRequestError
+   */
+  400: InvalidCursorError | InvalidRequestError
+  /**
+   * UnauthorizedError
+   */
+  401: UnauthorizedError
+  /**
+   * SessionNotFoundError
+   */
+  404: SessionNotFoundError
+  /**
+   * UnknownError
+   */
+  500: UnknownError1
+}
+
+export type V2SessionLedgerError = V2SessionLedgerErrors[keyof V2SessionLedgerErrors]
+
+export type V2SessionLedgerResponses = {
+  /**
+   * SessionLedger.Page
+   */
+  200: SessionLedgerPage
+}
+
+export type V2SessionLedgerResponse = V2SessionLedgerResponses[keyof V2SessionLedgerResponses]
 
 export type V2SessionEventsData = {
   body?: never

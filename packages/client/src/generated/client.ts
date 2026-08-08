@@ -31,6 +31,8 @@ import type {
   SessionsContextOutput,
   SessionsHistoryInput,
   SessionsHistoryOutput,
+  SessionsLedgerInput,
+  SessionsLedgerOutput,
   SessionsEventsInput,
   SessionsEventsOutput,
   SessionsInterruptInput,
@@ -454,6 +456,18 @@ export function make(options: ClientOptions) {
             query: { limit: input["limit"], after: input["after"] },
             successStatus: 200,
             declaredStatuses: [404, 400, 401],
+            empty: false,
+          },
+          requestOptions,
+        ),
+      ledger: (input: SessionsLedgerInput, requestOptions?: RequestOptions) =>
+        request<SessionsLedgerOutput>(
+          {
+            method: "GET",
+            path: `/api/session/${encodeURIComponent(input.sessionID)}/ledger`,
+            query: { limit: input["limit"], order: input["order"], cursor: input["cursor"] },
+            successStatus: 200,
+            declaredStatuses: [400, 404, 500, 401],
             empty: false,
           },
           requestOptions,

@@ -102,6 +102,8 @@ test("session methods use the public HTTP contract", async () => {
           historyPage === 1 ? { data: [modelSwitchedEvent], hasMore: true } : { data: [], hasMore: false },
         )
       }
+      if (url.includes("/ledger"))
+        return Response.json({ data: [], hasMore: false, cursor: {} })
       if (url.includes("/prompt")) return Response.json(admission)
       if (url.includes("/context")) return Response.json({ data: [] })
       if (url.includes("/message/")) return Response.json({ data: modelSwitchedMessage })
@@ -133,6 +135,7 @@ test("session methods use the public HTTP contract", async () => {
   const historyNext = history.hasMore
     ? await client.sessions.history({ sessionID: "ses_test", after: historyAfter, limit: 2 })
     : undefined
+  const ledger = await client.sessions.ledger({ sessionID: "ses_test", limit: 1, order: "desc" })
   const events = []
   for await (const event of client.sessions.events({ sessionID: "ses_test", after: 0 })) events.push(event)
   await client.sessions.interrupt({ sessionID: "ses_test" })
@@ -145,6 +148,7 @@ test("session methods use the public HTTP contract", async () => {
   expect(context).toEqual([])
   expect(history).toEqual({ data: [modelSwitchedEvent], hasMore: true })
   expect(historyNext).toEqual({ data: [], hasMore: false })
+  expect(ledger).toEqual({ data: [], hasMore: false, cursor: {} })
   expect(events).toEqual([modelSwitchedEvent])
   expect(message).toEqual(modelSwitchedMessage)
   expect(requests.map((request) => [request.init?.method, request.url])).toEqual([
@@ -159,6 +163,7 @@ test("session methods use the public HTTP contract", async () => {
     ["GET", "http://localhost:3000/api/session/ses_test/context"],
     ["GET", "http://localhost:3000/api/session/ses_test/history?limit=1&after=0"],
     ["GET", "http://localhost:3000/api/session/ses_test/history?limit=2&after=1"],
+    ["GET", "http://localhost:3000/api/session/ses_test/ledger?limit=1&order=desc"],
     ["GET", "http://localhost:3000/api/session/ses_test/event?after=0"],
     ["POST", "http://localhost:3000/api/session/ses_test/interrupt"],
     ["GET", "http://localhost:3000/api/session/ses_test/message/msg_model"],

@@ -349,6 +349,8 @@ import type {
   V2SessionHistoryResponses,
   V2SessionInterruptErrors,
   V2SessionInterruptResponses,
+  V2SessionLedgerErrors,
+  V2SessionLedgerResponses,
   V2SessionListErrors,
   V2SessionListResponses,
   V2SessionMessageErrors,
@@ -5739,6 +5741,40 @@ export class Session3 extends HeyApiClient {
     )
     return (options?.client ?? this.client).get<V2SessionHistoryResponses, V2SessionHistoryErrors, ThrowOnError>({
       url: "/api/session/{sessionID}/history",
+      ...options,
+      ...params,
+    })
+  }
+
+  /**
+   * Inspect paged context ledger
+   *
+   * Read bounded, provenance-preserving page metadata without returning provider-bound context contents.
+   */
+  public ledger<ThrowOnError extends boolean = false>(
+    parameters: {
+      sessionID: string
+      limit?: string
+      order?: "asc" | "desc"
+      cursor?: string
+    },
+    options?: Options<never, ThrowOnError>,
+  ) {
+    const params = buildClientParams(
+      [parameters],
+      [
+        {
+          args: [
+            { in: "path", key: "sessionID" },
+            { in: "query", key: "limit" },
+            { in: "query", key: "order" },
+            { in: "query", key: "cursor" },
+          ],
+        },
+      ],
+    )
+    return (options?.client ?? this.client).get<V2SessionLedgerResponses, V2SessionLedgerErrors, ThrowOnError>({
+      url: "/api/session/{sessionID}/ledger",
       ...options,
       ...params,
     })

@@ -1102,6 +1102,41 @@ const scenarios: Scenario[] = [
     }))
     .json(400, object, "status"),
   http.protected
+    .get("/api/session/{sessionID}/ledger", "v2.session.ledger")
+    .seeded((ctx) => ctx.session({ title: "Session ledger" }))
+    .at((ctx) => ({
+      path: `${route("/api/session/{sessionID}/ledger", { sessionID: ctx.state.id })}?${new URLSearchParams({
+        limit: "2",
+        order: "asc",
+      })}`,
+      headers: ctx.headers(),
+    }))
+    .json(
+      200,
+      (body) => {
+        object(body)
+        array(body.data)
+        check(typeof body.hasMore === "boolean", "Expected a ledger exhaustion signal")
+        object(body.cursor)
+      },
+      "none",
+    ),
+  http.protected
+    .get("/api/session/{sessionID}/ledger", "v2.session.ledger.missing")
+    .at((ctx) => ({
+      path: route("/api/session/{sessionID}/ledger", { sessionID: "ses_httpapi_missing" }),
+      headers: ctx.headers(),
+    }))
+    .json(404, object, "status"),
+  http.protected
+    .get("/api/session/{sessionID}/ledger", "v2.session.ledger.cursor.invalid")
+    .seeded((ctx) => ctx.session({ title: "Invalid ledger cursor" }))
+    .at((ctx) => ({
+      path: `${route("/api/session/{sessionID}/ledger", { sessionID: ctx.state.id })}?cursor=invalid`,
+      headers: ctx.headers(),
+    }))
+    .json(400, object, "status"),
+  http.protected
     .get("/api/session/{sessionID}/event", "v2.session.events.missing")
     .at((ctx) => ({
       path: `${route("/api/session/{sessionID}/event", { sessionID: "ses_httpapi_missing" })}?after=0`,

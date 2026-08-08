@@ -1,8 +1,9 @@
 import { SessionV2 } from "@opencode-ai/core/session"
-import { DateTime, Effect, Stream } from "effect"
+import type { SessionPagedLedger } from "@opencode-ai/core/session/paged-ledger"
+import { DateTime, Effect, Schema, Stream } from "effect"
 import { HttpApiBuilder, HttpApiSchema } from "effect/unstable/httpapi"
 import { Api } from "../api"
-import { SessionsCursor } from "@opencode-ai/protocol/groups/session"
+import { SessionLedgerCursor, SessionsCursor } from "@opencode-ai/protocol/groups/session"
 import {
   ConflictError,
   InvalidCursorError,
@@ -12,9 +13,45 @@ import {
   UnknownError,
 } from "@opencode-ai/protocol/errors"
 import { AbsolutePath } from "@opencode-ai/core/schema"
+import { SessionLedger } from "@opencode-ai/protocol/groups/session"
 
 const DefaultSessionsLimit = 50
 const DefaultSessionHistoryLimit = 50
+
+const ledgerEntry = (row: SessionPagedLedger.Info) => {
+  if (row.ledger_seq === null)
+    return Effect.fail(new UnknownError({ message: "Paged ledger sequence is unavailable", ref: crypto.randomUUID() }))
+  return Schema.decodeUnknownEffect(SessionLedger.Entry)({
+    id: row.id,
+    sequence: row.ledger_seq,
+    baselineSequence: row.baseline_seq,
+    ...(row.first_message_seq === null || row.last_message_seq === null
+      ? {}
+      : { messageRange: { first: row.first_message_seq, last: row.last_message_seq } }),
+    sourceCompleteness: row.message_seqs === null ? "legacy_limited" : "exact",
+    estimatedTokens: row.estimated_tokens,
+    contextLimit: row.context_limit,
+    residency: row.residency,
+    dirtyState: row.dirty_state,
+    ...(isDirtyStateReason(row.dirty_state_reason) ? { dirtyStateReason: row.dirty_state_reason } : {}),
+    ...(row.page_out_reason === "compaction" ? { pageOutReason: row.page_out_reason } : {}),
+    ...(row.page_in_reason === "restored-exact-range" ? { pageInReason: row.page_in_reason } : {}),
+    createdAt: DateTime.makeUnsafe(row.time_created),
+  }).pipe(
+    Effect.mapError(
+      () => new UnknownError({ message: "Paged ledger contains invalid inspection metadata", ref: crypto.randomUUID() }),
+    ),
+  )
+}
+
+function isDirtyStateReason(value: string | null): value is SessionLedger.DirtyStateReason {
+  return (
+    value === "no_authoritative_dirty_state" ||
+    value === "unsettled_tool_state" ||
+    value === "unsettled_compaction" ||
+    value === "compaction-completed"
+  )
+}
 
 export const SessionHandler = HttpApiBuilder.group(Api, "server.session", (handlers) =>
   Effect.gen(function* () {
@@ -164,6 +201,14 @@ export const SessionHandler = HttpApiBuilder.group(Api, "server.session", (handl
                       resource: error.messageID,
                     }),
                   ),
+                ),
+                Effect.catchTag(
+                  "SessionContextStyle.LockedConflict",
+                  (error) =>
+                    new ConflictError({
+                      message: error.message,
+                      resource: ctx.params.sessionID,
+                    }),
                 ),
               ),
           }
@@ -352,6 +397,67 @@ export const SessionHandler = HttpApiBuilder.group(Api, "server.session", (handl
                   }),
               ),
             )
+        }),
+      )
+      .handle(
+        "session.ledger",
+        Effect.fn(function* (ctx) {
+          const cursor = ctx.query.cursor
+            ? yield* SessionLedgerCursor.parse(ctx.query.cursor).pipe(
+                Effect.mapError(() => new InvalidCursorError({ message: "Invalid ledger cursor" })),
+              )
+            : undefined
+          if (cursor && (ctx.query.limit !== undefined || ctx.query.order !== undefined))
+            return yield* new InvalidCursorError({ message: "Ledger cursor cannot be combined with limit or order" })
+          if (cursor && cursor.sessionID !== ctx.params.sessionID)
+            return yield* new InvalidCursorError({ message: "Ledger cursor belongs to another session" })
+          const page = yield* session
+            .pagedLedger(
+              cursor
+                ? {
+                    sessionID: ctx.params.sessionID,
+                    after: cursor.sequence,
+                    limit: cursor.limit,
+                    order: cursor.order,
+                    direction: cursor.direction,
+                  }
+                : {
+                    sessionID: ctx.params.sessionID,
+                    limit: ctx.query.limit,
+                    order: ctx.query.order,
+                  },
+            )
+            .pipe(
+              Effect.catchTag(
+                "Session.NotFoundError",
+                (error) =>
+                  new SessionNotFoundError({
+                    sessionID: error.sessionID,
+                    message: `Session not found: ${error.sessionID}`,
+                  }),
+              ),
+            )
+          const data = yield* Effect.forEach(page.data, ledgerEntry)
+          const order = cursor?.order ?? ctx.query.order ?? "desc"
+          const makeCursor = (sequence: number | undefined, direction: "next" | "previous") =>
+            sequence === undefined
+              ? undefined
+              : SessionLedgerCursor.make({
+                  version: 1,
+                  sessionID: ctx.params.sessionID,
+                  limit: cursor?.limit ?? ctx.query.limit ?? DefaultSessionHistoryLimit,
+                  order,
+                  direction,
+                  sequence,
+                })
+          return {
+            data,
+            hasMore: page.hasMore,
+            cursor: {
+              previous: makeCursor(page.firstSequence, "previous"),
+              next: makeCursor(page.lastSequence, "next"),
+            },
+          }
         }),
       )
       .handle(

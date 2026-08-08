@@ -19,12 +19,14 @@ export type PageInput = {
   readonly after?: number
   readonly limit?: number
   readonly order?: "asc" | "desc"
+  readonly direction?: "next" | "previous"
 }
 
 export type Page = {
   readonly data: ReadonlyArray<Info>
   readonly hasMore: boolean
-  readonly nextAfter: number | undefined
+  readonly firstSequence: number | undefined
+  readonly lastSequence: number | undefined
 }
 
 /** Dirty-state vocabulary; unclassified is the honest default until a future
@@ -295,7 +297,9 @@ export const page = Effect.fn("SessionPagedLedger.page")(function* (
   db: DatabaseService,
   input: PageInput,
 ) {
-  const order = input.order ?? "desc"
+  const requestedOrder = input.order ?? "desc"
+  const direction = input.direction ?? "next"
+  const order = direction === "previous" ? (requestedOrder === "asc" ? "desc" : "asc") : requestedOrder
   const limit = Math.min(Math.max(input.limit ?? 50, 1), 100)
   const boundary =
     input.after === undefined
@@ -314,11 +318,12 @@ export const page = Effect.fn("SessionPagedLedger.page")(function* (
     .limit(limit + 1)
     .all()
     .pipe(Effect.orDie)
-  const data = rows.slice(0, limit)
+  const data = (direction === "previous" ? rows.slice(0, limit).toReversed() : rows.slice(0, limit))
   return {
     data,
     hasMore: rows.length > limit,
-    nextAfter: rows.length > limit ? data.at(-1)?.ledger_seq ?? undefined : undefined,
+    firstSequence: data[0]?.ledger_seq ?? undefined,
+    lastSequence: data.at(-1)?.ledger_seq ?? undefined,
   }
 })
 

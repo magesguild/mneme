@@ -41,6 +41,7 @@ test("embedded client uses the real router and handlers", async () => {
         resume: false,
       })
       const context = yield* opencode.sessions.context({ sessionID })
+      const ledger = yield* opencode.sessions.ledger({ sessionID })
       const wake = yield* opencode.sessions.prompt({
         sessionID,
         prompt: Prompt.make({ text: "Promote this input" }),
@@ -85,6 +86,7 @@ test("embedded client uses the real router and handlers", async () => {
       expect(page.data.some((session) => session.id === sessionID)).toBe(true)
       expect(active).toEqual({})
       expect(admitted.sessionID).toBe(sessionID)
+      expect(ledger.data).toEqual([])
       expect(prompted.type).toBe("session.next.prompted")
       expect(wakeContext).toContainEqual(expect.objectContaining({ id: wake.id, type: "user" }))
       expect(context.some((message) => message.type === "model-switched")).toBe(true)

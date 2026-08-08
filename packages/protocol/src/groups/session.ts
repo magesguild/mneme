@@ -2,6 +2,7 @@ import { SessionMessage } from "@opencode-ai/schema/session-message"
 import { SessionInput } from "@opencode-ai/schema/session-input"
 import { PromptInput } from "@opencode-ai/schema/prompt-input"
 import { Session } from "@opencode-ai/schema/session"
+import { SessionLedger } from "@opencode-ai/schema/session-ledger"
 import { Project } from "@opencode-ai/schema/project"
 import { AbsolutePath, NonNegativeInt, PositiveInt, RelativePath, statics } from "@opencode-ai/schema/schema"
 import { Workspace } from "@opencode-ai/schema/workspace"
@@ -21,6 +22,8 @@ import { Model } from "@opencode-ai/schema/model"
 import { Location } from "@opencode-ai/schema/location"
 import { Revert } from "@opencode-ai/schema/revert"
 import { SessionEvent } from "@opencode-ai/schema/session-event"
+
+export { SessionLedger }
 
 const SessionsQueryFields = {
   workspace: Workspace.ID.pipe(Schema.optional),
@@ -89,6 +92,43 @@ const SessionHistoryLimit = PositiveInt.check(Schema.isLessThanOrEqualTo(100))
 export const SessionHistoryQuery = Schema.Struct({
   limit: Schema.NumberFromString.pipe(Schema.decodeTo(SessionHistoryLimit), Schema.optional),
   after: Schema.NumberFromString.pipe(Schema.decodeTo(NonNegativeInt), Schema.optional),
+})
+
+const SessionLedgerCursorInput = Schema.Struct({
+  version: Schema.Literal(1),
+  sessionID: Session.ID,
+  limit: SessionHistoryLimit,
+  order: Schema.Literals(["asc", "desc"]),
+  direction: Schema.Literals(["next", "previous"]),
+  sequence: NonNegativeInt,
+})
+const SessionLedgerCursorJson = Schema.fromJsonString(SessionLedgerCursorInput)
+const encodeSessionLedgerCursor = Schema.encodeSync(SessionLedgerCursorJson)
+const decodeSessionLedgerCursor = Schema.decodeUnknownEffect(SessionLedgerCursorJson)
+
+export const SessionLedgerCursor = Schema.String.pipe(
+  Schema.brand("SessionLedgerCursor"),
+  statics((schema) => {
+    const make = schema.make.bind(schema)
+    return {
+      make: (input: typeof SessionLedgerCursorInput.Type) =>
+        make(Encoding.encodeBase64Url(encodeSessionLedgerCursor(input))),
+      parse: (input: string) =>
+        Effect.suspend(() => {
+          const result = Encoding.decodeBase64UrlString(input)
+          return Result.isFailure(result)
+            ? Effect.fail(invalidCursor)
+            : decodeSessionLedgerCursor(result.success).pipe(Effect.mapError(() => invalidCursor))
+        }),
+    }
+  }),
+)
+export type SessionLedgerCursor = typeof SessionLedgerCursor.Type
+
+export const SessionLedgerQuery = Schema.Struct({
+  limit: Schema.NumberFromString.pipe(Schema.decodeTo(SessionHistoryLimit), Schema.optional),
+  order: Schema.Literals(["asc", "desc"]).pipe(Schema.optional),
+  cursor: SessionLedgerCursor.pipe(Schema.optional),
 })
 
 const SessionsQueryCursor = SessionsCursor.annotate({
@@ -320,6 +360,23 @@ export const makeSessionGroup = <I extends HttpApiMiddleware.AnyId, S>(sessionLo
             summary: "Get session history",
             description:
               "Read one finite page of public durable Session events after an exclusive aggregate sequence. Newly committed events may appear on later pages.",
+          }),
+      ),
+    )
+    .add(
+      HttpApiEndpoint.get("session.ledger", "/api/session/:sessionID/ledger", {
+        params: { sessionID: Session.ID },
+        query: SessionLedgerQuery,
+        success: SessionLedger.Page,
+        error: [InvalidCursorError, SessionNotFoundError, UnknownError],
+      })
+        .middleware(sessionLocationMiddleware)
+        .annotateMerge(
+          OpenApi.annotations({
+            identifier: "v2.session.ledger",
+            summary: "Inspect paged context ledger",
+            description:
+              "Read bounded, provenance-preserving page metadata without returning provider-bound context contents.",
           }),
         ),
     )
