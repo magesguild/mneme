@@ -231,7 +231,7 @@ const layer = Layer.effect(
         context: ledgerContext,
         estimatedTokens: Token.estimate(ledgerContext),
         contextLimit,
-        dirtyState: "unclassified",
+        dirtyState: yield* SessionPagedLedger.classifyDurable(db, session.id, context),
       })
       if (yield* compaction.compactIfNeeded({ sessionID: session.id, entries, model, request: baseRequest })) {
         if (pagedObservation) {
@@ -254,6 +254,15 @@ const layer = Layer.effect(
             restoration.lastMessageSeq,
           )
         : []
+      if (restoration) {
+        yield* SessionPagedLedger.assertRestoredRange(
+          restoration.pageID,
+          restoration.firstMessageSeq,
+          restoration.lastMessageSeq,
+          restored,
+        )
+        yield* SessionPagedLedger.pageIn(db, restoration.pageID, "restored-exact-range")
+      }
       const request = restored.length
         ? {
             ...baseRequest,
@@ -274,7 +283,10 @@ const layer = Layer.effect(
           context: restoredContext,
           estimatedTokens: Token.estimate(restoredContext),
           contextLimit,
-          dirtyState: "unclassified",
+          dirtyState: yield* SessionPagedLedger.classifyDurable(db, session.id, [
+            ...restored.map((entry) => entry.message),
+            ...context,
+          ]),
         })
       }
       const startSnapshot = yield* snapshots.capture()

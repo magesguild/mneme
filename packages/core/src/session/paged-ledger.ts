@@ -1,10 +1,12 @@
 export * as SessionPagedLedger from "./paged-ledger"
 
 import { createHash } from "node:crypto"
-import { desc, eq } from "drizzle-orm"
+import { and, desc, eq } from "drizzle-orm"
 import { Effect, Schema } from "effect"
 import type { Database } from "../database/database"
 import { EventV2 } from "../event"
+import { EventTable } from "../event/sql"
+import type { SessionMessage } from "./message"
 import { SessionPagedLedgerTable } from "./sql"
 import type { SessionSchema } from "./schema"
 
@@ -36,6 +38,20 @@ export class PageOutRefused extends Schema.TaggedErrorClass<PageOutRefused>()(
   }
 }
 
+export class PageRestoreRefused extends Schema.TaggedErrorClass<PageRestoreRefused>()(
+  "SessionPagedLedger.PageRestoreRefused",
+  {
+    id: EventV2.ID,
+    firstMessageSeq: Schema.Int,
+    lastMessageSeq: Schema.Int,
+    reason: Schema.String,
+  },
+) {
+  override get message() {
+    return `Cannot restore page ${this.id}: ${this.reason}`
+  }
+}
+
 type Observation = {
   readonly sessionID: SessionSchema.ID
   readonly baselineSeq: number
@@ -47,6 +63,64 @@ type Observation = {
 }
 
 export const contentHash = (context: string) => createHash("sha256").update(context).digest("hex")
+
+/** Classify only durable session evidence; semantic authorship remains unclassified. */
+export const classify = (messages: ReadonlyArray<SessionMessage.Message>): DirtyState =>
+  messages.some(
+    (message) =>
+      message.type === "assistant" &&
+      message.content.some(
+        (part) => part.type === "tool" && (part.state.status === "pending" || part.state.status === "running"),
+      ),
+  )
+    ? "tool_result_pending"
+    : "unclassified"
+
+const latestCompactionEvent = Effect.fn("SessionPagedLedger.latestCompactionEvent")(function* (
+  db: DatabaseService,
+  sessionID: SessionSchema.ID,
+  type: "session.next.compaction.started" | "session.next.compaction.ended",
+) {
+  return yield* db
+    .select({ seq: EventTable.seq })
+    .from(EventTable)
+    .where(and(eq(EventTable.aggregate_id, sessionID), eq(EventTable.type, type)))
+    .orderBy(desc(EventTable.seq))
+    .limit(1)
+    .get()
+    .pipe(Effect.orDie)
+})
+
+/** Add only durable compaction evidence to the pure message classification. */
+export const classifyDurable = Effect.fn("SessionPagedLedger.classifyDurable")(function* (
+  db: DatabaseService,
+  sessionID: SessionSchema.ID,
+  messages: ReadonlyArray<SessionMessage.Message>,
+) {
+  const classified = classify(messages)
+  if (classified !== "unclassified") return classified
+  const [started, ended] = yield* Effect.all([
+    latestCompactionEvent(db, sessionID, "session.next.compaction.started"),
+    latestCompactionEvent(db, sessionID, "session.next.compaction.ended"),
+  ])
+  if (started !== undefined && (ended === undefined || started.seq > ended.seq)) return "summary_pending"
+  return classified
+})
+
+export const assertRestoredRange = Effect.fn("SessionPagedLedger.assertRestoredRange")(function* (
+  id: EventV2.ID,
+  firstMessageSeq: number,
+  lastMessageSeq: number,
+  entries: ReadonlyArray<{ readonly seq: number }>,
+) {
+  if (entries[0]?.seq !== firstMessageSeq || entries.at(-1)?.seq !== lastMessageSeq)
+    return yield* new PageRestoreRefused({
+      id,
+      firstMessageSeq,
+      lastMessageSeq,
+      reason: entries.length === 0 ? "source_range_missing" : "source_range_incomplete",
+    })
+})
 
 /** Record a provider-bound context candidate without storing its contents. */
 export const observe = Effect.fn("SessionPagedLedger.observe")(function* (

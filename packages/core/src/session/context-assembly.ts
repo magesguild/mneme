@@ -2,6 +2,7 @@ export * as SessionContextAssembly from "./context-assembly"
 
 import { Effect } from "effect"
 import type { Database } from "../database/database"
+import type { EventV2 } from "../event"
 import { SessionContextStyle } from "./context-style"
 import { SessionPagedLedger } from "./paged-ledger"
 import type { SessionSchema } from "./schema"
@@ -20,6 +21,7 @@ export type Input = {
 }
 
 export type Restoration = {
+  readonly pageID: EventV2.ID
   readonly firstMessageSeq: number
   readonly lastMessageSeq: number
 }
@@ -58,8 +60,8 @@ export const restore = Effect.fn("SessionContextAssembly.restore")(function* (
     input.baseTokens + page.estimated_tokens > input.contextLimit
   )
     return undefined
-  yield* SessionPagedLedger.pageIn(db, page.id, "fits-current-context")
   return {
+    pageID: page.id,
     firstMessageSeq: page.first_message_seq,
     lastMessageSeq: page.last_message_seq,
   }
