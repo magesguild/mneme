@@ -72,6 +72,15 @@ describe("tui thread", () => {
     expect(args.mdns).toBe(false)
   })
 
+  test("parses the first-prompt context style option", async () => {
+    const args = await yargs([])
+      .command({ ...TuiThreadCommand, handler: () => {} })
+      .exitProcess(false)
+      .parse(["--context-style", "paged"])
+
+    expect(args.contextStyle).toBe("paged")
+  })
+
   cliIt.live("rejects mini-only options without --mini", ({ opencode }) =>
     Effect.gen(function* () {
       const result = yield* opencode.spawn(["--replay-limit", "10"])
