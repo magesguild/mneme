@@ -174,6 +174,14 @@ describe("SessionPagedLedger", () => {
       expect(rows[0]).not.toHaveProperty("context")
       expect(rows[0]?.content_hash).toBe(SessionPagedLedger.contentHash(context))
       expect((yield* SessionPagedLedger.latestPagedOut(db, sessionID))?.id).toBe(pageID)
+
+      yield* SessionPagedLedger.pageIn(db, pageID, "test-restoration")
+      const refusedPageIn = yield* SessionPagedLedger.pageIn(db, pageID, "duplicate-restoration").pipe(Effect.exit)
+      expect(Exit.isFailure(refusedPageIn)).toBe(true)
+      if (Exit.isFailure(refusedPageIn))
+        expect(Cause.squash(refusedPageIn.cause)).toEqual(
+          new SessionPagedLedger.PageInRefused({ id: pageID, residency: "resident" }),
+        )
     }),
   )
 })

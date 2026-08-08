@@ -7,7 +7,7 @@ import type { ContextSnapshotDecodeError, MessageDecodeError } from "../error"
 import { SessionRunnerModel } from "./model"
 import type { SystemContext } from "../../system-context/index"
 import type { ToolOutputStore } from "../../tool-output-store"
-import type { PageOutRefused, PageRestoreRefused } from "../paged-ledger"
+import type { PageInRefused, PageOutRefused, PageRestoreRefused } from "../paged-ledger"
 
 export type RunError =
   | LLMError
@@ -18,6 +18,7 @@ export type RunError =
   | ToolOutputStore.Error
   | PageOutRefused
   | PageRestoreRefused
+  | PageInRefused
 
 /** Runs one local continuation from already-recorded Session history. */
 export interface Interface {

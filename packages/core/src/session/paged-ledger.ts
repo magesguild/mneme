@@ -52,6 +52,18 @@ export class PageRestoreRefused extends Schema.TaggedErrorClass<PageRestoreRefus
   }
 }
 
+export class PageInRefused extends Schema.TaggedErrorClass<PageInRefused>()(
+  "SessionPagedLedger.PageInRefused",
+  {
+    id: EventV2.ID,
+    residency: Schema.String,
+  },
+) {
+  override get message() {
+    return `Cannot page in ${this.id} while its residency is ${this.residency}`
+  }
+}
+
 type Observation = {
   readonly sessionID: SessionSchema.ID
   readonly baselineSeq: number
@@ -198,6 +210,13 @@ export const pageIn = Effect.fn("SessionPagedLedger.pageIn")(function* (
   id: EventV2.ID,
   reason: string,
 ) {
+  const row = yield* db
+    .select({ residency: SessionPagedLedgerTable.residency })
+    .from(SessionPagedLedgerTable)
+    .where(eq(SessionPagedLedgerTable.id, id))
+    .get()
+    .pipe(Effect.orDie)
+  if (row && row.residency !== "paged_out") return yield* new PageInRefused({ id, residency: row.residency })
   yield* db
     .update(SessionPagedLedgerTable)
     .set({ residency: "resident", page_in_reason: reason })
