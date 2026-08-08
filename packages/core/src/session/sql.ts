@@ -205,6 +205,7 @@ export const SessionPagedLedgerTable = sqliteTable(
     context_limit: integer().notNull(),
     residency: text().notNull().default("resident"),
     dirty_state: text().notNull().default("unclassified"),
+    dirty_state_reason: text(),
     page_out_reason: text(),
     page_in_reason: text(),
     time_created: integer()

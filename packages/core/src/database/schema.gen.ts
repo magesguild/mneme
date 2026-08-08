@@ -199,6 +199,7 @@ export default {
           \`context_limit\` integer NOT NULL,
           \`residency\` text DEFAULT 'resident' NOT NULL,
           \`dirty_state\` text DEFAULT 'unclassified' NOT NULL,
+          \`dirty_state_reason\` text,
           \`page_out_reason\` text,
           \`page_in_reason\` text,
           \`time_created\` integer NOT NULL,
