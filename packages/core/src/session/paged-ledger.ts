@@ -12,6 +12,8 @@ import type { SessionSchema } from "./schema"
 
 type DatabaseService = Database.Interface["db"]
 
+export type Info = typeof SessionPagedLedgerTable.$inferSelect
+
 /** Dirty-state vocabulary; unclassified is the honest default until a future
  * authoring/checkpoint policy can classify working material more precisely. */
 export const DirtyState = Schema.Literals([
