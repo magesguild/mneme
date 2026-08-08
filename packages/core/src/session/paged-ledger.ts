@@ -1,7 +1,7 @@
 export * as SessionPagedLedger from "./paged-ledger"
 
 import { createHash } from "node:crypto"
-import { and, desc, eq } from "drizzle-orm"
+import { and, asc, desc, eq } from "drizzle-orm"
 import { Effect, Schema } from "effect"
 import type { Database } from "../database/database"
 import { EventV2 } from "../event"
@@ -253,7 +253,8 @@ export const pageIn = Effect.fn("SessionPagedLedger.pageIn")(function* (
     .pipe(Effect.orDie)
 })
 
-export const latestPagedOut = Effect.fn("SessionPagedLedger.latestPagedOut")(function* (
+/** Read the complete page ledger for inspection without changing residency. */
+export const history = Effect.fn("SessionPagedLedger.history")(function* (
   db: DatabaseService,
   sessionID: SessionSchema.ID,
 ) {
@@ -261,10 +262,15 @@ export const latestPagedOut = Effect.fn("SessionPagedLedger.latestPagedOut")(fun
     .select()
     .from(SessionPagedLedgerTable)
     .where(eq(SessionPagedLedgerTable.session_id, sessionID))
-    .orderBy(desc(SessionPagedLedgerTable.time_created))
+    .orderBy(asc(SessionPagedLedgerTable.time_created))
     .all()
-    .pipe(
-      Effect.orDie,
-      Effect.map((rows) => rows.find((row) => row.residency === "paged_out")),
-    )
+    .pipe(Effect.orDie)
+})
+
+export const latestPagedOut = Effect.fn("SessionPagedLedger.latestPagedOut")(function* (
+  db: DatabaseService,
+  sessionID: SessionSchema.ID,
+) {
+  const rows = yield* history(db, sessionID)
+  return rows.toReversed().find((row) => row.residency === "paged_out")
 })

@@ -181,6 +181,7 @@ describe("SessionPagedLedger", () => {
 
       const rows = yield* db.select().from(SessionPagedLedgerTable).all().pipe(Effect.orDie)
       expect(rows).toHaveLength(1)
+      expect(yield* SessionPagedLedger.history(db, sessionID)).toHaveLength(1)
       expect(rows[0]).toMatchObject({
         session_id: sessionID,
         baseline_seq: 12,
