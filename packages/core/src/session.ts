@@ -33,6 +33,7 @@ import { MessageDecodeError } from "./session/error"
 import { SessionEvent } from "./session/event"
 import { SessionInput } from "./session/input"
 import { SessionContextStyle } from "./session/context-style"
+import { SessionPagedLedger } from "./session/paged-ledger"
 import { Snapshot } from "./snapshot"
 import { SessionRevert } from "./session/revert"
 import { Revert } from "@opencode-ai/schema/revert"
@@ -137,6 +138,7 @@ export interface Interface {
     sessionID: SessionSchema.ID,
   ) => Effect.Effect<SessionMessage.Message[], NotFoundError | MessageDecodeError>
   readonly contextStyle: (sessionID: SessionSchema.ID) => Effect.Effect<SessionContextStyle.Style, NotFoundError>
+  readonly pagedLedger: (sessionID: SessionSchema.ID) => Effect.Effect<ReadonlyArray<SessionPagedLedger.Info>, NotFoundError>
   readonly events: (input: {
     sessionID: SessionSchema.ID
     after?: number
@@ -354,6 +356,10 @@ const layer = Layer.effect(
       contextStyle: Effect.fn("V2Session.contextStyle")(function* (sessionID) {
         yield* result.get(sessionID)
         return (yield* SessionContextStyle.current(db, sessionID)) ?? "standard"
+      }),
+      pagedLedger: Effect.fn("V2Session.pagedLedger")(function* (sessionID) {
+        yield* result.get(sessionID)
+        return yield* SessionPagedLedger.history(db, sessionID)
       }),
       events: (input) =>
         Stream.unwrap(
