@@ -16,6 +16,7 @@ export type Input = {
   readonly context: string
   readonly estimatedTokens: number
   readonly contextLimit: number
+  readonly dirtyState: SessionPagedLedger.DirtyState
 }
 
 export type Restoration = {
