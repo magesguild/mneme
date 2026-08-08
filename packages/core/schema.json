@@ -1,9 +1,9 @@
 {
   "version": "7",
   "dialect": "sqlite",
-  "id": "4fb0bb7f-26ec-4059-a4af-e6bf0436325a",
+  "id": "4e8a4ebe-bdf0-4aa2-8136-cb77d2272eb7",
   "prevIds": [
-    "3da18195-9784-4a7c-afdf-d8deea4d70f3"
+    "9f27efe5-bc25-4090-9476-1b3614cfc2d1"
   ],
   "ddl": [
     {
@@ -1127,6 +1127,16 @@
       "default": null,
       "generated": null,
       "name": "baseline_seq",
+      "entityType": "columns",
+      "table": "session_paged_ledger"
+    },
+    {
+      "type": "integer",
+      "notNull": false,
+      "autoincrement": false,
+      "default": null,
+      "generated": null,
+      "name": "ledger_seq",
       "entityType": "columns",
       "table": "session_paged_ledger"
     },
@@ -2356,6 +2366,24 @@
       "where": null,
       "origin": "manual",
       "name": "session_paged_ledger_session_time_idx",
+      "entityType": "indexes",
+      "table": "session_paged_ledger"
+    },
+    {
+      "columns": [
+        {
+          "value": "session_id",
+          "isExpression": false
+        },
+        {
+          "value": "ledger_seq",
+          "isExpression": false
+        }
+      ],
+      "isUnique": true,
+      "where": null,
+      "origin": "manual",
+      "name": "session_paged_ledger_session_seq_idx",
       "entityType": "indexes",
       "table": "session_paged_ledger"
     },

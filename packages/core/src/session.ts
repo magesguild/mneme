@@ -138,7 +138,9 @@ export interface Interface {
     sessionID: SessionSchema.ID,
   ) => Effect.Effect<SessionMessage.Message[], NotFoundError | MessageDecodeError>
   readonly contextStyle: (sessionID: SessionSchema.ID) => Effect.Effect<SessionContextStyle.Style, NotFoundError>
-  readonly pagedLedger: (sessionID: SessionSchema.ID) => Effect.Effect<ReadonlyArray<SessionPagedLedger.Info>, NotFoundError>
+  readonly pagedLedger: (
+    input: SessionPagedLedger.PageInput,
+  ) => Effect.Effect<SessionPagedLedger.Page, NotFoundError>
   readonly events: (input: {
     sessionID: SessionSchema.ID
     after?: number
@@ -357,9 +359,9 @@ const layer = Layer.effect(
         yield* result.get(sessionID)
         return (yield* SessionContextStyle.current(db, sessionID)) ?? "standard"
       }),
-      pagedLedger: Effect.fn("V2Session.pagedLedger")(function* (sessionID) {
-        yield* result.get(sessionID)
-        return yield* SessionPagedLedger.history(db, sessionID)
+      pagedLedger: Effect.fn("V2Session.pagedLedger")(function* (input) {
+        yield* result.get(input.sessionID)
+        return yield* SessionPagedLedger.page(db, input)
       }),
       events: (input) =>
         Stream.unwrap(

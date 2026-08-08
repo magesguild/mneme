@@ -1,7 +1,7 @@
 export * as SessionPagedLedger from "./paged-ledger"
 
 import { createHash } from "node:crypto"
-import { and, asc, desc, eq } from "drizzle-orm"
+import { and, asc, desc, eq, gt, lt, max } from "drizzle-orm"
 import { Effect, Schema } from "effect"
 import type { Database } from "../database/database"
 import { EventV2 } from "../event"
@@ -13,6 +13,19 @@ import type { SessionSchema } from "./schema"
 type DatabaseService = Database.Interface["db"]
 
 export type Info = typeof SessionPagedLedgerTable.$inferSelect
+
+export type PageInput = {
+  readonly sessionID: SessionSchema.ID
+  readonly after?: number
+  readonly limit?: number
+  readonly order?: "asc" | "desc"
+}
+
+export type Page = {
+  readonly data: ReadonlyArray<Info>
+  readonly hasMore: boolean
+  readonly nextAfter: number | undefined
+}
 
 /** Dirty-state vocabulary; unclassified is the honest default until a future
  * authoring/checkpoint policy can classify working material more precisely. */
@@ -172,12 +185,20 @@ export const observe = Effect.fn("SessionPagedLedger.observe")(function* (
   observation: Observation,
 ) {
   const messageSeqs = observation.messageSeqs.toSorted((a, b) => a - b)
+  const latest = yield* db
+    .select({ ledgerSeq: max(SessionPagedLedgerTable.ledger_seq) })
+    .from(SessionPagedLedgerTable)
+    .where(eq(SessionPagedLedgerTable.session_id, observation.sessionID))
+    .get()
+    .pipe(Effect.orDie)
+  const ledgerSeq = (latest?.ledgerSeq ?? -1) + 1
   const row = yield* db
     .insert(SessionPagedLedgerTable)
     .values({
       id: EventV2.ID.create(),
       session_id: observation.sessionID,
       baseline_seq: observation.baselineSeq,
+      ledger_seq: ledgerSeq,
       first_message_seq: messageSeqs[0],
       last_message_seq: messageSeqs.at(-1),
       message_seqs: messageSeqs,
@@ -267,6 +288,38 @@ export const history = Effect.fn("SessionPagedLedger.history")(function* (
     .orderBy(asc(SessionPagedLedgerTable.time_created))
     .all()
     .pipe(Effect.orDie)
+})
+
+/** Read one bounded ledger page without changing residency. */
+export const page = Effect.fn("SessionPagedLedger.page")(function* (
+  db: DatabaseService,
+  input: PageInput,
+) {
+  const order = input.order ?? "desc"
+  const limit = Math.min(Math.max(input.limit ?? 50, 1), 100)
+  const boundary =
+    input.after === undefined
+      ? undefined
+      : order === "asc"
+        ? gt(SessionPagedLedgerTable.ledger_seq, input.after)
+        : lt(SessionPagedLedgerTable.ledger_seq, input.after)
+  const where = boundary
+    ? and(eq(SessionPagedLedgerTable.session_id, input.sessionID), boundary)
+    : eq(SessionPagedLedgerTable.session_id, input.sessionID)
+  const rows = yield* db
+    .select()
+    .from(SessionPagedLedgerTable)
+    .where(where)
+    .orderBy(order === "asc" ? asc(SessionPagedLedgerTable.ledger_seq) : desc(SessionPagedLedgerTable.ledger_seq))
+    .limit(limit + 1)
+    .all()
+    .pipe(Effect.orDie)
+  const data = rows.slice(0, limit)
+  return {
+    data,
+    hasMore: rows.length > limit,
+    nextAfter: rows.length > limit ? data.at(-1)?.ledger_seq ?? undefined : undefined,
+  }
 })
 
 export const latestPagedOut = Effect.fn("SessionPagedLedger.latestPagedOut")(function* (

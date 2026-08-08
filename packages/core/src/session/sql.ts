@@ -197,6 +197,7 @@ export const SessionPagedLedgerTable = sqliteTable(
       .notNull()
       .references(() => SessionTable.id, { onDelete: "cascade" }),
     baseline_seq: integer().notNull(),
+    ledger_seq: integer(),
     first_message_seq: integer(),
     last_message_seq: integer(),
     message_seqs: text({ mode: "json" }).$type<ReadonlyArray<number>>(),
@@ -212,5 +213,8 @@ export const SessionPagedLedgerTable = sqliteTable(
       .notNull()
       .$default(() => Date.now()),
   },
-  (table) => [index("session_paged_ledger_session_time_idx").on(table.session_id, table.time_created)],
+  (table) => [
+    index("session_paged_ledger_session_time_idx").on(table.session_id, table.time_created),
+    uniqueIndex("session_paged_ledger_session_seq_idx").on(table.session_id, table.ledger_seq),
+  ],
 )
