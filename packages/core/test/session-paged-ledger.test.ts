@@ -44,16 +44,17 @@ describe("SessionPagedLedger", () => {
         context,
         estimatedTokens: 20,
         contextLimit: 100,
+        dirtyState: "unsaved_observation",
       })
       const refused = yield* SessionPagedLedger.pageOut(db, pageID, "compaction").pipe(Effect.exit)
       expect(Exit.isFailure(refused)).toBe(true)
       if (Exit.isFailure(refused)) {
         expect(Cause.squash(refused.cause)).toEqual(
-          new SessionPagedLedger.PageOutRefused({ id: pageID, dirtyState: "unclassified" }),
+          new SessionPagedLedger.PageOutRefused({ id: pageID, dirtyState: "unsaved_observation" }),
         )
       }
       expect((yield* db.select().from(SessionPagedLedgerTable).all().pipe(Effect.orDie))[0]).toMatchObject({
-        dirty_state: "unclassified",
+        dirty_state: "unsaved_observation",
         residency: "resident",
       })
 

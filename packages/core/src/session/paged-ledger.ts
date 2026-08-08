@@ -43,6 +43,7 @@ type Observation = {
   readonly context: string
   readonly estimatedTokens: number
   readonly contextLimit: number
+  readonly dirtyState: DirtyState
 }
 
 export const contentHash = (context: string) => createHash("sha256").update(context).digest("hex")
@@ -64,6 +65,7 @@ export const observe = Effect.fn("SessionPagedLedger.observe")(function* (
       content_hash: contentHash(observation.context),
       estimated_tokens: observation.estimatedTokens,
       context_limit: observation.contextLimit,
+      dirty_state: observation.dirtyState,
     })
     .returning({ id: SessionPagedLedgerTable.id })
     .get()

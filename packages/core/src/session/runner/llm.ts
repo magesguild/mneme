@@ -231,6 +231,7 @@ const layer = Layer.effect(
         context: ledgerContext,
         estimatedTokens: Token.estimate(ledgerContext),
         contextLimit,
+        dirtyState: "unclassified",
       })
       if (yield* compaction.compactIfNeeded({ sessionID: session.id, entries, model, request: baseRequest })) {
         if (pagedObservation) {
@@ -273,6 +274,7 @@ const layer = Layer.effect(
           context: restoredContext,
           estimatedTokens: Token.estimate(restoredContext),
           contextLimit,
+          dirtyState: "unclassified",
         })
       }
       const startSnapshot = yield* snapshots.capture()
