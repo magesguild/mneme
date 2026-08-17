@@ -57,6 +57,15 @@ The bounded projection of a Core-executed tool result persisted in Session histo
 **Managed Tool Output File**:
 A temporary file created under OpenCode's shared tool-output directory to retain complete output that was too large for Session history.
 
+**Memory Pressure Guidance**:
+A concise model-visible signal that context budget is approaching a threshold and gives the model an opportunity to preserve important material before paging or compaction. It does not itself classify or write memory.
+
+**Context Recompile**:
+A deliberate rebuild and durable admission of the provider-visible projection from current authoritative context sources. Recompile refreshes visibility and cache/epoch state; it does not perform semantic retrieval or repair memory representation.
+
+**Paged Context**:
+An explicit Session context style that maintains durable page identity, residency, source evidence, and bounded restoration for model-visible working context while preserving standard Session behavior.
+
 **Model Request Options**:
 Provider-semantic model settings selected from the Catalog and active Session variant before the LLM protocol adapter encodes them for a provider request.
 _Avoid_: Request body, wire options
@@ -197,6 +206,27 @@ _Avoid_: Response envelope
 - Existing tool-managed output paths survive generic bounding. A fallback file retains exactly the complete projected text received by the Tool Registry and never claims to reconstruct output already discarded by tool-specific shaping.
 - **Managed Tool Output Files** use globally unique names in one shared flat directory. Their absolute paths are readable and searchable by ordinary tools; other absolute paths remain outside Location-scoped filesystem authority.
 - Provider-executed tool results remain provider-native transcript facts outside generic Tool Registry bounding. Their context control requires provider-aware pruning or compaction because some providers require exact structured round-trip payloads.
+
+## Context paging contribution boundary
+
+Context paging is being developed as an upstream-oriented OpenCode contribution,
+not as an independent harness lineage. The `context-paging` branch is based on
+the latest `upstream/dev`. Standard sessions remain the compatibility baseline;
+paged behavior must be explicit, incremental, and independently testable.
+
+The current viable start point is tool capability. A paged session must expose,
+execute, persist, and replay the same authorized tool calls and results as a
+standard session before display polish or an upstream PR is considered. This
+includes ordinary MCP reachability, including Nephesh when configured, without
+plugin-only shortcuts.
+
+The current experiment is known to have incomplete tool access and a minimal,
+non-native renderer. Ordering, scrolling, formatting, reasoning, tool states,
+and errors require later parity work. Native-equivalent rendering is a hard
+requirement before an upstream PR, not optional polish. The CLI must also gain a
+built-in `/paging` or `/context-mode paged` command using the same durable style
+lock as the launch flag. These gaps are documented rather than treated as
+evidence that the core paging model is complete or invalid.
 
 ## Client contract architecture
 

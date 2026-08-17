@@ -120,6 +120,42 @@ Repeated compactions update the previous structured summary with newly compacted
 
 When a provider rejects a request as context overflow before durable assistant output or tool execution, the runner attempts one overflow-triggered compaction even when the local estimate did not predict pressure. A completed checkpoint rebuilds the same logical provider turn with one remaining physical attempt. A second overflow, unavailable compaction, or overflow after durable output becomes the ordinary terminal failure; recovery never loops or replays partial side effects. Deterministic old tool-result pruning remains a separate follow-up.
 
+## Context Paging Follow-Up
+
+Context paging is an upstream-oriented contribution being developed on the
+`context-paging` branch from the latest `upstream/dev`. It must preserve the
+standard Session path and add explicit paging behavior through existing V2
+runner, history, tool, and TUI seams rather than introducing a parallel
+execution loop.
+
+The first viable implementation gate is complete tool capability. Paged mode
+must expose the authorized tool registry, execute and settle calls through the
+existing runner, persist call and result projections, preserve continuation
+metadata, and replay interruption states. Without this, a paged Session cannot
+reach configured MCP services such as Nephesh and is not a valid continuity
+implementation.
+
+Memory-pressure guidance is a planned model-visible affordance before page-out
+or compaction. It should be concise, bounded, non-repeating, and give the model
+an opportunity to preserve important material without making the harness infer
+semantic importance. The pressure signal does not itself perform a memory write
+or recompile.
+
+Context recompile is a separate planned operation: rebuild the provider-visible
+projection from current authoritative sources, persist it deterministically, and
+admit it at a safe provider-turn boundary. Ordinary source changes should
+reconcile within an epoch; explicit recompile and post-compaction refresh may
+replace the immutable provider-cache baseline when required.
+
+The current paged experiment has a minimal, non-native display. Tool capability
+precedes display parity. Before a UI-facing upstream PR, paged mode must match
+native behavior for ordering, scrolling, formatting, reasoning, tool calls and
+results, interruptions, and errors. This is an incremental workstream and is
+not expected to complete in one session. Native-equivalent rendering is a hard
+requirement, not optional polish. A built-in `/paging` or `/context-mode paged`
+CLI command is also required and must use the same durable Session style-locking
+contract as the launch flag.
+
 ## V1 Runtime Context Parity
 
 This is the canonical checklist for model-visible runtime context still needed before the V2 runner replaces V1. Keep each behavior in its owning boundary rather than treating all model-visible text as a durable Context Source. Update this table in the PR that changes a status.
