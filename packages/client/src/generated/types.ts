@@ -397,6 +397,7 @@ export type SessionsPromptInput = {
         readonly name: string
         readonly source?: { readonly start: number; readonly end: number; readonly text: string }
       }>
+      readonly contextStyle?: "standard" | "paged"
     }
     readonly delivery?: "steer" | "queue" | null
     readonly resume?: boolean | null
@@ -415,6 +416,7 @@ export type SessionsPromptInput = {
         readonly name: string
         readonly source?: { readonly start: number; readonly end: number; readonly text: string }
       }>
+      readonly contextStyle?: "standard" | "paged"
     }
     readonly delivery?: "steer" | "queue" | null
     readonly resume?: boolean | null
@@ -433,6 +435,7 @@ export type SessionsPromptInput = {
         readonly name: string
         readonly source?: { readonly start: number; readonly end: number; readonly text: string }
       }>
+      readonly contextStyle?: "standard" | "paged"
     }
     readonly delivery?: "steer" | "queue" | null
     readonly resume?: boolean | null
@@ -451,6 +454,7 @@ export type SessionsPromptInput = {
         readonly name: string
         readonly source?: { readonly start: number; readonly end: number; readonly text: string }
       }>
+      readonly contextStyle?: "standard" | "paged"
     }
     readonly delivery?: "steer" | "queue" | null
     readonly resume?: boolean | null

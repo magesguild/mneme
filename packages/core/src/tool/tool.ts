@@ -43,6 +43,7 @@ type Config<
   Structured extends SchemaType<any> = Output,
 > = {
   readonly description: string
+  readonly inputSchema?: JsonSchema.JsonSchema
   readonly input: Input
   readonly output: Output
   readonly structured?: Structured
@@ -82,7 +83,7 @@ export function make<
       const definition = new ToolDefinition({
         name,
         description: config.description,
-        inputSchema: toJsonSchema(config.input),
+        inputSchema: config.inputSchema ?? toJsonSchema(config.input),
         outputSchema: toJsonSchema(config.structured ?? config.output),
       })
       definitions.set(name, definition)

@@ -2709,6 +2709,7 @@ export type PromptInput = {
   text: string
   files?: Array<PromptInputFileAttachment>
   agents?: Array<PromptAgentAttachment>
+  contextStyle?: "standard" | "paged"
 }
 
 export type ConflictError = {

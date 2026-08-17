@@ -165,6 +165,14 @@ export const SessionHandler = HttpApiBuilder.group(Api, "server.session", (handl
                     }),
                   ),
                 ),
+                Effect.catchTag("SessionContextStyle.LockedConflict", (error) =>
+                  Effect.fail(
+                    new ConflictError({
+                      message: error.message,
+                      resource: ctx.params.sessionID,
+                    }),
+                  ),
+                ),
               ),
           }
         }),
