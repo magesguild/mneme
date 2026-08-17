@@ -1021,6 +1021,7 @@ export function Prompt(props: PromptProps) {
       }
 
       sessionID = res.data.id
+      await sync.session.refresh()
     }
 
     const inputText = expandTrackedPastedText(
@@ -1118,14 +1119,13 @@ export function Prompt(props: PromptProps) {
             },
             { throwOnError: true },
           )
-      promptRequest
-        .catch((error) => {
-          toast.show({
-            title: "Failed to send prompt",
-            message: errorMessage(error),
-            variant: "error",
-          })
+      promptRequest.catch((error) => {
+        toast.show({
+          title: "Failed to send prompt",
+          message: errorMessage(error),
+          variant: "error",
         })
+      })
       if (editorParts.length > 0) editor.markSelectionSent()
     }
     history.append({
